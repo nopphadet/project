@@ -39,8 +39,8 @@ class Login extends StatelessWidget {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 0, 119, 255),
-              Color.fromARGB(255, 127, 161, 224)
+              Color.fromARGB(255, 255, 0, 0),
+              Color.fromARGB(255, 230, 101, 101)
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -50,13 +50,13 @@ class Login extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.checklist_rtl,
+              Icons.login,
               size: 100,
               color: Colors.white,
             ),
             const SizedBox(height: 20),
             const Text(
-              'ยินดีต้อนรับ',
+              'เข้าสู่ระบบ',
               style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.bold,

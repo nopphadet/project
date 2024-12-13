@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter_project/Login.dart';
-// import 'package:flutter_project/welcome.dart';
 // import 'package:flutter_project/register.dart';
-import 'package:flutter_project/welcome.dart';
+// import 'package:flutter_project/welcome.dart';
 // import 'package:flutter_project/DismissibleListView.dart';
+import 'package:flutter_project/welcome.dart';
 
 void main() => runApp(App06DismissibleListView());
 

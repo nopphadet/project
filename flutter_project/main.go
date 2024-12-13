@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -11,9 +12,9 @@ import (
 )
 
 type User struct {
-	Username        string `json:"username" binding:"required"`
+	Username        string `json:"username" binding:"required,alpha"`
 	Email           string `json:"email" binding:"required,email"`
-	Phone           string `json:"phone" binding:"required"`
+	Phone           string `json:"phone" binding:"required,min=9,max=10"`
 	Password        string `json:"password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required,min=6"`
 }
@@ -44,6 +45,7 @@ func main() {
 	r := gin.Default()
 
 	// Route สำหรับสมัครสมาชิก
+
 	r.POST("/register", func(c *gin.Context) {
 		var user User
 		// รับข้อมูลจาก Flutter
@@ -52,6 +54,28 @@ func main() {
 			return
 		}
 
+		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@gmail\.com$`)
+		if !emailRegex.MatchString(user.Email) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "อีเมลต้องเป็น @Gmail เท่านั้น",
+			})
+			return
+		}
+
+		phoneRegex := regexp.MustCompile(`^0[0-9]{9}$`)
+		if !phoneRegex.MatchString(user.Phone) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "เบอร์โทรศัพท์ต้องมีความยาว 10 หลัก และเริ่มต้นด้วย 0",
+			})
+			return
+		}
+
+		regex := regexp.MustCompile(`^[a-zA-Z]+$`)
+		if !regex.MatchString(user.Username) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "ชื่อผู้ใช้ต้องเป็นอักษรภาษาอังกฤษเท่านั้น"})
+			return
+		}
 		// ตรวจสอบว่ารหัสผ่านและยืนยันรหัสผ่านตรงกัน
 		if user.Password != user.ConfirmPassword {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "รหัสผ่านไม่ตรงกัน"})

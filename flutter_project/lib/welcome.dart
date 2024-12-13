@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_project/login.dart';
 import 'package:flutter_project/register.dart';
 
-void main() {
-  runApp(const Welcome());
-}
+// void main() {
+//   runApp(const Welcome());
+// }
 
 class Welcome extends StatelessWidget {
   const Welcome({super.key});
@@ -27,8 +27,8 @@ class WelcomeScreen extends StatelessWidget {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 0, 119, 255),
-              Color.fromARGB(255, 127, 161, 224)
+              Color.fromARGB(255, 255, 0, 0),
+              Color.fromARGB(255, 230, 101, 101)
             ], // สีพื้นหลังไล่โทน
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -37,11 +37,10 @@ class WelcomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ไอคอนรูปอาหาร
-            Icon(
-              Icons.checklist_rtl,
-              size: 100,
-              color: Colors.white,
+            Image.asset(
+              'assets/PNG/LOGO.png',
+              height: 250,
+              width: 250,
             ),
             const SizedBox(height: 20),
             // ข้อความต้อนรับ
