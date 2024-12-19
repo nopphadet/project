@@ -79,8 +79,8 @@ class SignupScreen extends StatelessWidget {
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color.fromARGB(255, 255, 0, 0),
-                Color.fromARGB(255, 230, 101, 101),
+                Color(0xFF4A148C),
+                Color(0xFF880E4F),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -199,7 +199,7 @@ class SignupScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30)),
                       ),
-                      child: const Text('สมัครสมาชิก',
+                      child: const Text('ลงทะเบียน',
                           style: TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold)),
