@@ -5,9 +5,11 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,6 +30,16 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
+// ฟังก์ชันเพื่อสร้าง JWT Token
+func createToken(username string, duration time.Duration) (string, error) {
+	claims := jwt.MapClaims{
+		"username": username,
+		"exp":      time.Now().Add(duration).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte("your_secret_key")) // ใช้ secret key ของคุณ
+}
+
 func main() {
 	// เชื่อมต่อฐานข้อมูล MySQL
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
@@ -45,7 +57,6 @@ func main() {
 	r := gin.Default()
 
 	// Route สำหรับสมัครสมาชิก
-
 	r.POST("/register", func(c *gin.Context) {
 		var user User
 		// รับข้อมูลจาก Flutter
@@ -106,6 +117,7 @@ func main() {
 		var loginData struct {
 			Username string `json:"username" binding:"required"`
 			Password string `json:"password" binding:"required"`
+			Remember bool   `json:"remember"`
 		}
 
 		// รับข้อมูลจาก Flutter
@@ -133,8 +145,50 @@ func main() {
 			return
 		}
 
+		// กำหนดระยะเวลาของ Token
+		tokenDuration := time.Hour * 24 // Default duration (1 วัน)
+		if loginData.Remember {
+			tokenDuration = time.Hour * 24 * 30 // Remember Me (30 วัน)
+		}
+
+		// สร้าง JWT Token
+		token, err := createToken(loginData.Username, tokenDuration)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง Token ได้"})
+			return
+		}
+
+		// ตั้งค่า Cookies
+		c.SetCookie("auth_token", token, int(tokenDuration.Seconds()), "/", "", true, true)
+
 		// ส่งข้อความตอบกลับเมื่อเข้าสู่ระบบสำเร็จ
-		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ"})
+		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
+	})
+
+	// Route สำหรับตรวจสอบโปรไฟล์
+	r.GET("/profile", func(c *gin.Context) {
+		tokenString, err := c.Cookie("auth_token")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ"})
+			return
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte("your_secret_key"), nil
+		})
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
+			return
+		}
+
+		username := claims["username"].(string)
+		c.JSON(http.StatusOK, gin.H{"message": "ยินดีต้อนรับ", "username": username})
 	})
 
 	// เริ่มเซิร์ฟเวอร์

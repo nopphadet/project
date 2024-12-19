@@ -1,32 +1,41 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+// ignore: depend_on_referenced_packages
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class Login extends StatelessWidget {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final storage = FlutterSecureStorage(); // Secure storage for token
 
   Future<void> login(BuildContext context) async {
     final String username = usernameController.text;
     final String password = passwordController.text;
 
-    final url = Uri.parse(
-        'https://hfm99nd8-7070.asse.devtunnels.ms/login'); // URL ของ API
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'password': password}),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data['message'])),
+    final url = Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/login');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
       );
-    } else {
-      final error = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        await storage.write(key: 'token', value: data['token']); // Save token
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'])),
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error['error'])),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error['error'])),
+        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
       );
     }
   }
