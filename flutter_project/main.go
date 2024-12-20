@@ -4,13 +4,29 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+
+	// "os"
 	"regexp"
 	"time"
+
+	// "fmt"
+	// "github/BasZ4ll/go-send-email/test"
+	// "log"
+	// "net/smtp"
+	// "os"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v4"
+
+	// "github.com/joho/godotenv"
+
+	// "github.com/tealeg/xlsx"
 	"golang.org/x/crypto/bcrypt"
+	// "path/filepath"
+	//"net/smtp"
+	// "github.com/joho/godotenv"
+	// "github.com/tealeg/xlsx"
 )
 
 const jwtSecretKey = "your_secret_key"
@@ -145,39 +161,6 @@ func main() {
 
 		c.SetCookie("auth_token", token, 3600, "/", "", true, true)
 		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
-	})
-
-	// Handler สำหรับการรีเซ็ตรหัสผ่าน
-	r.POST("/reset-password", func(c *gin.Context) {
-		var requestData struct {
-			Username string `json:"username" binding:"required"`
-		}
-
-		// Parse ข้อมูลจาก request body
-		if err := c.ShouldBindJSON(&requestData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
-			return
-		}
-
-		// ตรวจสอบชื่อผู้ใช้ในฐานข้อมูล
-		var user User
-		query := "SELECT username, email FROM users WHERE username = ?"
-		err := db.QueryRow(query, requestData.Username).Scan(&user.Username, &user.Email)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบชื่อผู้ใช้"})
-			return
-		}
-
-		// สร้าง reset token (ตัวอย่างนี้เราจะส่งเป็นข้อความ reset token)
-		resetToken := "reset-token-for-" + user.Username // ตัวอย่าง mock token
-
-		// ส่ง reset token (สามารถส่งไปยังอีเมลของผู้ใช้ได้ที่นี่)
-		// ตัวอย่าง: ส่งอีเมลด้วย reset token (ต้องทำการเชื่อมต่อกับอีเมลเซิร์ฟเวอร์จริง)
-
-		c.JSON(http.StatusOK, gin.H{
-			"message":     "ส่งคำขอรีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว",
-			"reset_token": resetToken, // Mock response สำหรับ token
-		})
 	})
 
 	r.Run(":7070")

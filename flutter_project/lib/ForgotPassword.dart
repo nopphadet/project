@@ -8,18 +8,18 @@ class ForgotPassword extends StatefulWidget {
 }
 
 class _ForgotPasswordState extends State<ForgotPassword> {
-  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
 
-  Future<void> resetPassword() async {
-    final String username = usernameController.text;
+  Future<void> sendResetEmail() async {
+    final String email = emailController.text;
     final url = Uri.parse(
-        'https://hfm99nd8-7070.asse.devtunnels.ms/reset-password'); // API endpoint สำหรับรีเซ็ตรหัสผ่าน
+        'http://localhost:7070/forgot-password'); // เปลี่ยนเป็น URL ของ API คุณ
 
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username}),
+        body: jsonEncode({'email': email}),
       );
 
       if (response.statusCode == 200) {
@@ -52,21 +52,21 @@ class _ForgotPasswordState extends State<ForgotPassword> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'กรุณากรอกชื่อผู้ใช้ของคุณ',
+              'กรุณากรอกอีเมลของคุณ',
               style: TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
             TextField(
-              controller: usernameController,
+              controller: emailController,
               decoration: InputDecoration(
-                labelText: 'Username',
+                labelText: 'Email',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: resetPassword,
-              child: const Text('รีเซ็ตรหัสผ่าน'),
+              onPressed: sendResetEmail,
+              child: const Text('ส่งรหัสผ่านชั่วคราว'),
             ),
           ],
         ),
