@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_project/Forgot%20password.dart';
 import 'package:flutter_project/register.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -116,6 +117,26 @@ class Login extends StatelessWidget {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    "คุณลืมบัญชีใช่ไหม",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ForgotPassword()),
+                      );
+                    },
+                    child: const Text(
+                      'ลงทะเบียน',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),

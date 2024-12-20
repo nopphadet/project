@@ -200,5 +200,72 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "ลบผู้ใช้สำเร็จ"})
 	})
 
+	// ลืมรหัสผ่าน
+	r.POST("/forgot_password", func(c *gin.Context) {
+		var data struct {
+			Email string `json:"email" binding:"required,email"`
+		}
+
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+			return
+		}
+
+		// ตรวจสอบว่าอีเมลมีอยู่ในระบบหรือไม่
+		var username string
+		err := db.QueryRow("SELECT username FROM users WHERE email = ?", data.Email).Scan(&username)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "อีเมลไม่ถูกต้อง"})
+			return
+		}
+
+		// สร้าง Token สำหรับรีเซ็ตรหัสผ่าน
+		token, err := createToken(username, time.Minute*15)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง Token ได้"})
+			return
+		}
+
+		// ส่งอีเมล (นี่เป็นโค้ดตัวอย่าง; ต้องใช้ library ส่งเมลจริง)
+		log.Printf("ส่งอีเมลไปที่: %s, Token: %s", data.Email, token)
+
+		c.JSON(http.StatusOK, gin.H{"message": "ส่งคำขอรีเซ็ตรหัสผ่านสำเร็จ"})
+	})
+
+	// รีเซ็ตรหัสผ่าน
+	r.POST("/reset_password", func(c *gin.Context) {
+		var data struct {
+			Token    string `json:"token" binding:"required"`
+			Password string `json:"password" binding:"required,min=6"`
+		}
+
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+			return
+		}
+
+		// ตรวจสอบ Token
+		token, err := jwt.Parse(data.Token, func(token *jwt.Token) (interface{}, error) {
+			return []byte(jwtSecretKey), nil
+		})
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
+			return
+		}
+
+		claims, _ := token.Claims.(jwt.MapClaims)
+		username := claims["username"].(string)
+
+		// อัปเดตรหัสผ่านในฐานข้อมูล
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+		_, err = db.Exec("UPDATE users SET password = ? WHERE username = ?", string(hashedPassword), username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถรีเซ็ตรหัสผ่านได้"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "รีเซ็ตรหัสผ่านสำเร็จ"})
+	})
+
 	r.Run(":7070")
 }
