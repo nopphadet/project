@@ -2,7 +2,12 @@ module newmos/newmos_api
 
 go 1.23.2
 
-require github.com/go-sql-driver/mysql v1.8.1
+require (
+	github.com/go-sql-driver/mysql v1.8.1
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+)
+
+require gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -12,7 +17,7 @@ require (
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.10.0 // indirect
+	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.23.0 // indirect
