@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_project/Forgot%20password.dart';
+// import 'package:flutter_project/Forgot%20password.dart';
+import 'package:flutter_project/ForgotPassword.dart';
 import 'package:flutter_project/register.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;

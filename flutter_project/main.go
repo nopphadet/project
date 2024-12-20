@@ -4,16 +4,15 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/gomail.v2"
 )
 
-// Secret Key
 const jwtSecretKey = "your_secret_key"
 
 // User Struct
@@ -24,7 +23,6 @@ type User struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-// ฟังก์ชันสร้าง JWT Token
 func createToken(username string, duration time.Duration) (string, error) {
 	claims := jwt.MapClaims{
 		"username": username,
@@ -34,21 +32,37 @@ func createToken(username string, duration time.Duration) (string, error) {
 	return token.SignedString([]byte(jwtSecretKey))
 }
 
-// ฟังก์ชันส่งอีเมล
-func sendEmail(to, subject, body string) error {
-	m := gomail.NewMessage()
-	m.SetHeader("From", "your_email@gmail.com") // เปลี่ยนเป็นอีเมลของคุณ
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", subject)
-	m.SetBody("text/html", body)
+func authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString, err := c.Cookie("auth_token")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ"})
+			c.Abort()
+			return
+		}
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, "your_email@gmail.com", "your_app_password") // ใช้ App Password
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte(jwtSecretKey), nil
+		})
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
+			c.Abort()
+			return
+		}
 
-	return d.DialAndSend(m)
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
+			c.Abort()
+			return
+		}
+
+		c.Set("username", claims["username"])
+		c.Next()
+	}
 }
 
 func main() {
-	// เชื่อมต่อฐานข้อมูล
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
 	if err != nil {
 		log.Fatal("ไม่สามารถเชื่อมต่อฐานข้อมูล: ", err)
@@ -62,83 +76,108 @@ func main() {
 
 	r := gin.Default()
 
-	// ลืมรหัสผ่าน
-	r.POST("/forgot_password", func(c *gin.Context) {
-		var data struct {
-			Email string `json:"email" binding:"required,email"`
-		}
-
-		if err := c.ShouldBindJSON(&data); err != nil {
+	// สมัครสมาชิก
+	r.POST("/register", func(c *gin.Context) {
+		var user User
+		if err := c.ShouldBindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 			return
 		}
 
-		// ตรวจสอบว่าอีเมลมีอยู่ในระบบหรือไม่
-		var username string
-		err := db.QueryRow("SELECT username FROM users WHERE email = ?", data.Email).Scan(&username)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "อีเมลไม่ถูกต้อง"})
+		// Validation
+		emailRegex := regexp.MustCompile("^[a-zA-Z0-9._%+-]+@gmail\\.com$")
+		if !emailRegex.MatchString(user.Email) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "อีเมลต้องเป็น @Gmail เท่านั้น"})
 			return
 		}
 
-		// สร้าง Token สำหรับรีเซ็ตรหัสผ่าน
-		token, err := createToken(username, time.Minute*15)
+		phoneRegex := regexp.MustCompile("^0[0-9]{9}$")
+		if !phoneRegex.MatchString(user.Phone) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "เบอร์โทรศัพท์ต้องเริ่มต้นด้วย 0 และมี 10 หลัก"})
+			return
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการเข้ารหัสรหัสผ่าน"})
+			return
+		}
+
+		query := "INSERT INTO users (username, email, phone, password) VALUES (?, ?, ?, ?)"
+		_, err = db.Exec(query, user.Username, user.Email, user.Phone, string(hashedPassword))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถบันทึกข้อมูลได้: " + err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "สมัครสมาชิกสำเร็จ"})
+	})
+
+	// เข้าสู่ระบบ
+	r.POST("/login", func(c *gin.Context) {
+		var loginData struct {
+			Username string `json:"username" binding:"required"`
+			Password string `json:"password" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&loginData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+			return
+		}
+
+		var hashedPassword string
+		query := "SELECT password FROM users WHERE username = ?"
+		err := db.QueryRow(query, loginData.Username).Scan(&hashedPassword)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
+			return
+		}
+
+		if bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginData.Password)) != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
+			return
+		}
+
+		token, err := createToken(loginData.Username, time.Hour*24)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง Token ได้"})
 			return
 		}
 
-		// ส่งอีเมล
-		body := `<p>คุณได้รับคำขอรีเซ็ตรหัสผ่าน</p>
-		         <p>โปรดคลิกลิงก์ด้านล่างเพื่อรีเซ็ตรหัสผ่านของคุณ:</p>
-		         <a href="https://yourapp.com/reset-password?token=` + token + `">รีเซ็ตรหัสผ่าน</a>`
-		err = sendEmail(data.Email, "คำขอรีเซ็ตรหัสผ่าน", body)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถส่งอีเมลได้"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "ส่งคำขอรีเซ็ตรหัสผ่านสำเร็จ"})
+		c.SetCookie("auth_token", token, 3600, "/", "", true, true)
+		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
 	})
 
-	// รีเซ็ตรหัสผ่าน
-	r.POST("/reset_password", func(c *gin.Context) {
-		var data struct {
-			Token    string `json:"token" binding:"required"`
-			Password string `json:"password" binding:"required,min=6"`
+	// Handler สำหรับการรีเซ็ตรหัสผ่าน
+	r.POST("/reset-password", func(c *gin.Context) {
+		var requestData struct {
+			Username string `json:"username" binding:"required"`
 		}
 
-		if err := c.ShouldBindJSON(&data); err != nil {
+		// Parse ข้อมูลจาก request body
+		if err := c.ShouldBindJSON(&requestData); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 			return
 		}
 
-		// ตรวจสอบ Token
-		token, err := jwt.Parse(data.Token, func(token *jwt.Token) (interface{}, error) {
-			return []byte(jwtSecretKey), nil
-		})
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || claims["username"] == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
-			return
-		}
-
-		username := claims["username"].(string)
-
-		// อัปเดตรหัสผ่านในฐานข้อมูล
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
-		_, err = db.Exec("UPDATE users SET password = ? WHERE username = ?", string(hashedPassword), username)
+		// ตรวจสอบชื่อผู้ใช้ในฐานข้อมูล
+		var user User
+		query := "SELECT username, email FROM users WHERE username = ?"
+		err := db.QueryRow(query, requestData.Username).Scan(&user.Username, &user.Email)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถรีเซ็ตรหัสผ่านได้"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบชื่อผู้ใช้"})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "รีเซ็ตรหัสผ่านสำเร็จ"})
+		// สร้าง reset token (ตัวอย่างนี้เราจะส่งเป็นข้อความ reset token)
+		resetToken := "reset-token-for-" + user.Username // ตัวอย่าง mock token
+
+		// ส่ง reset token (สามารถส่งไปยังอีเมลของผู้ใช้ได้ที่นี่)
+		// ตัวอย่าง: ส่งอีเมลด้วย reset token (ต้องทำการเชื่อมต่อกับอีเมลเซิร์ฟเวอร์จริง)
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":     "ส่งคำขอรีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว",
+			"reset_token": resetToken, // Mock response สำหรับ token
+		})
 	})
 
 	r.Run(":7070")

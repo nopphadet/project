@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class ForgotPassword extends StatelessWidget {
-  final TextEditingController emailController = TextEditingController();
+class ForgotPassword extends StatefulWidget {
+  @override
+  _ForgotPasswordState createState() => _ForgotPasswordState();
+}
 
-  Future<void> forgotPassword(BuildContext context) async {
-    final String email = emailController.text;
+class _ForgotPasswordState extends State<ForgotPassword> {
+  final TextEditingController usernameController = TextEditingController();
 
-    final url =
-        Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/forgot_password');
+  Future<void> resetPassword() async {
+    final String username = usernameController.text;
+    final url = Uri.parse(
+        'https://hfm99nd8-7070.asse.devtunnels.ms/reset-password'); // API endpoint สำหรับรีเซ็ตรหัสผ่าน
+
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+        body: jsonEncode({'username': username}),
       );
 
       if (response.statusCode == 200) {
@@ -22,7 +27,6 @@ class ForgotPassword extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
         );
-        Navigator.pop(context);
       } else {
         final error = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,32 +49,24 @@ class ForgotPassword extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'กรอกอีเมลของคุณเพื่อรีเซ็ตรหัสผ่าน',
-              style: TextStyle(fontSize: 16),
+              'กรุณากรอกชื่อผู้ใช้ของคุณ',
+              style: TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
             TextField(
-              controller: emailController,
+              controller: usernameController,
               decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                labelText: 'Username',
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => forgotPassword(context),
-              child: const Text('ส่งคำขอ'),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'หากไม่ได้รับอีเมล กรุณาตรวจสอบโฟลเดอร์สแปมหรือส่งคำขออีกครั้ง',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-              textAlign: TextAlign.center,
+              onPressed: resetPassword,
+              child: const Text('รีเซ็ตรหัสผ่าน'),
             ),
           ],
         ),
