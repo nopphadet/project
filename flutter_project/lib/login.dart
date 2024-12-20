@@ -133,7 +133,7 @@ class Login extends StatelessWidget {
                       );
                     },
                     child: const Text(
-                      'ลงทะเบียน',
+                      'ลืมรหัสผ่าน',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

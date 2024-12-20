@@ -39,7 +39,9 @@ class ForgotPassword extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ลืมรหัสผ่าน')),
+      appBar: AppBar(
+        title: const Text('ลืมรหัสผ่าน'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -63,6 +65,12 @@ class ForgotPassword extends StatelessWidget {
             ElevatedButton(
               onPressed: () => forgotPassword(context),
               child: const Text('ส่งคำขอ'),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'หากไม่ได้รับอีเมล กรุณาตรวจสอบโฟลเดอร์สแปมหรือส่งคำขออีกครั้ง',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
