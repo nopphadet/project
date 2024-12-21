@@ -1,112 +1,53 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-// ignore: depend_on_referenced_packages
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class ForgotPassword extends StatefulWidget {
-  @override
-  _ForgotPasswordState createState() => _ForgotPasswordState();
-}
-
-class _ForgotPasswordState extends State<ForgotPassword> {
-  final TextEditingController emailController = TextEditingController();
-  bool isLoading = false;
-
-  // ฟังก์ชันตรวจสอบรูปแบบอีเมล
-  bool isValidEmail(String email) {
-    String pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
-    RegExp regex = RegExp(pattern);
-    return regex.hasMatch(email);
-  }
-
-  // ฟังก์ชันส่งคำขอรีเซ็ตรหัสผ่าน
-  Future<void> sendResetEmail() async {
-    final email = emailController.text;
-
-    // ตรวจสอบรูปแบบอีเมล
-    if (!isValidEmail(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('กรุณากรอกอีเมลที่ถูกต้อง')),
-      );
-      return;
-    }
-
-    setState(() {
-      isLoading = true; // ตั้งค่าสถานะการโหลดเป็น true
-    });
-
-    final url = Uri.parse(
-        'https://hfm99nd8-7070.asse.devtunnels.ms/password'); // URL ของ API
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      );
-
-      setState(() {
-        isLoading = false; // ตั้งค่าสถานะการโหลดเป็น false เมื่อเสร็จ
-      });
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'])),
-        );
-
-        // จัดเก็บ Token ใน SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('auth_token', data['token']); // เก็บ Token
-
-        // ถ้าต้องการให้ผู้ใช้ไปยังหน้าล็อกอินหรือหน้าหลัก
-        // Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        final error = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error['error'])),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false; // ตั้งค่าสถานะการโหลดเป็น false เมื่อเกิดข้อผิดพลาด
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-      );
-    }
-  }
-
+class ContactAdmin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ลืมรหัสผ่าน'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF4A148C),
+              Color(0xFF880E4F),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'กรุณากรอกอีเมลของคุณ',
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
+            GestureDetector(
+              onTap: () async {
+                const lineUrl = "https://line.me/R/ti/p/your_admin_line_id";
+                if (await canLaunchUrl(Uri.parse(lineUrl))) {
+                  await launchUrl(Uri.parse(lineUrl),
+                      mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("ไม่สามารถเปิดลิงก์ได้")),
+                  );
+                }
+              },
+              child: const CircleAvatar(
+                radius: 80,
+                backgroundImage:
+                    AssetImage('assets/PNG/line.jpg'), // ใส่รูปภาพของคุณที่นี่
               ),
             ),
             const SizedBox(height: 20),
-            isLoading
-                ? CircularProgressIndicator() // แสดงการโหลดเมื่อกำลังส่งคำขอ
-                : ElevatedButton(
-                    onPressed: sendResetEmail,
-                    child: const Text('ส่งรหัสผ่านชั่วคราว'),
-                  ),
+            const Text(
+              'ติดต่อแอดมินกรุณาแตะที่รูปภาพ LINE',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

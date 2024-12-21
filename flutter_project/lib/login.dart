@@ -66,14 +66,10 @@ class Login extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      size: 60,
-                      color: Color(0xFF880E4F),
-                    ),
+                  Image.asset(
+                    'assets/PNG/LOGO.png',
+                    height: 220,
+                    width: 220,
                   ),
                   const SizedBox(height: 20),
                   const Text(
