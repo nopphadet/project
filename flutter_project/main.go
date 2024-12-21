@@ -152,56 +152,5 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
 	})
 
-	// รีเซ็ตรหัสผ่าน
-	r.POST("/password", authMiddleware(), func(c *gin.Context) {
-		var data struct {
-			OldPassword string `json:"old_password" binding:"required"`
-			NewPassword string `json:"new_password" binding:"required,min=6"`
-		}
-
-		if err := c.ShouldBindJSON(&data); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
-			return
-		}
-
-		username, _ := c.Get("username")
-		if username == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่สามารถระบุชื่อผู้ใช้ได้"})
-			return
-		}
-
-		// ตรวจสอบรหัสผ่านเดิม
-		var hashedPassword string
-		query := "SELECT password FROM users WHERE username = ?"
-		err := db.QueryRow(query, username).Scan(&hashedPassword)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
-			return
-		}
-
-		// ตรวจสอบรหัสผ่านเก่า
-		if bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(data.OldPassword)) != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "รหัสผ่านเก่าไม่ถูกต้อง"})
-			return
-		}
-
-		// เข้ารหัสรหัสผ่านใหม่
-		hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(data.NewPassword), bcrypt.DefaultCost)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเข้ารหัสรหัสผ่านใหม่ได้"})
-			return
-		}
-
-		// อัปเดตในฐานข้อมูล
-		updateQuery := "UPDATE users SET password = ? WHERE username = ?"
-		_, err = db.Exec(updateQuery, string(hashedNewPassword), username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตรหัสผ่านได้"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "เปลี่ยนรหัสผ่านสำเร็จ"})
-	})
-
 	r.Run(":7070")
 }
