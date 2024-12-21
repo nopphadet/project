@@ -15,6 +15,8 @@ import (
 	// "net/smtp"
 	// "os"
 
+	"newmos/newmos_api/password"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v4"
@@ -79,6 +81,9 @@ func authMiddleware() gin.HandlerFunc {
 }
 
 func main() {
+	password.GenerateToken()
+	password.PasswordReset()
+
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
 	if err != nil {
 		log.Fatal("ไม่สามารถเชื่อมต่อฐานข้อมูล: ", err)

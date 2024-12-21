@@ -1,4 +1,4 @@
-package main
+package password
 
 import (
 	"crypto/rand"
@@ -15,7 +15,7 @@ import (
 
 //  const jwtSecretKey = "your_secret_key"
 
-func generateToken() (string, error) {
+func GenerateToken() (string, error) {
 	token := make([]byte, 16)
 	_, err := rand.Read(token)
 	if err != nil {
@@ -24,7 +24,7 @@ func generateToken() (string, error) {
 	return hex.EncodeToString(token), nil
 }
 
-func sendResetEmail(email, resetToken string) error {
+func SendResetEmail(email, resetToken string) error {
 	smtpHost := "smtp.gmail.com"
 	smtpPort := "587"
 	senderEmail := "your-email@gmail.com"
@@ -74,7 +74,7 @@ func PasswordReset() {
 			return
 		}
 
-		resetToken, err := generateToken()
+		resetToken, err := GenerateToken()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง token ได้"})
 			return
@@ -88,7 +88,7 @@ func PasswordReset() {
 			return
 		}
 
-		err = sendResetEmail(request.Email, resetToken)
+		err = SendResetEmail(request.Email, resetToken)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถส่งอีเมลได้"})
 			return
@@ -135,6 +135,5 @@ func PasswordReset() {
 
 		c.JSON(http.StatusOK, gin.H{"message": "เปลี่ยนรหัสผ่านสำเร็จ"})
 	})
-
 	r.Run(":7070")
 }
