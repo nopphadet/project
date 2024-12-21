@@ -9,10 +9,7 @@ class ContactAdmin extends StatelessWidget {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF4A148C),
-              Color(0xFF880E4F),
-            ],
+            colors: [Color(0xFF4A148C), Color(0xFF880E4F)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
