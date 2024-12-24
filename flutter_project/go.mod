@@ -2,14 +2,12 @@ module newmos/newmos_api
 
 go 1.23.2
 
-require (
-	github.com/go-sql-driver/mysql v1.8.1
-	github.com/joho/godotenv v1.5.1
-	github.com/tealeg/xlsx v1.0.5
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-)
+require github.com/go-sql-driver/mysql v1.8.1
 
-require gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+require (
+	github.com/kr/pretty v0.1.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+)
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
