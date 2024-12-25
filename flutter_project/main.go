@@ -2,25 +2,38 @@ package main
 
 import (
 	"database/sql"
+	// "encoding/json"
 	"log"
 	"net/http"
 	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const jwtSecretKey = "your_secret_key"
 
-// User Struct
 type User struct {
 	Username string `json:"username" binding:"required,alpha"`
 	Email    string `json:"email" binding:"required,email"`
-	Phone    string `json:"phone" binding:"required,min=9,max=10"`
+	Phone    string `json:"phone" binding:"required,len=10"`
 	Password string `json:"password" binding:"required,min=6"`
+}
+
+type Product struct {
+	ID            uint    `json:"id"`
+	ProductNumber string  `json:"product_number"`
+	ProductName   string  `json:"product_name"`
+	Category      string  `json:"category"`
+	Quantity      int     `json:"quantity"`
+	UnitPrice     float64 `json:"unit_price"`
+	Barcode       string  `json:"barcode"`
+	StockStatus   string  `json:"stock_status"`
+	ImagePath     string  `json:"image_path"`
 }
 
 func createToken(username string, duration time.Duration) (string, error) {
@@ -36,7 +49,6 @@ func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString, err := c.Cookie("auth_token")
 		if err != nil {
-			// แสดงข้อความเมื่อไม่พบคุกกี้ auth_token
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ, ไม่พบ Token"})
 			c.Abort()
 			return
@@ -46,7 +58,6 @@ func authMiddleware() gin.HandlerFunc {
 			return []byte(jwtSecretKey), nil
 		})
 		if err != nil || !token.Valid {
-			// แสดงข้อความเมื่อ Token ไม่ถูกต้อง
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง หรือหมดอายุ"})
 			c.Abort()
 			return
@@ -54,19 +65,17 @@ func authMiddleware() gin.HandlerFunc {
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			// แสดงข้อความหากไม่สามารถแยก Claims ได้
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
 			c.Abort()
 			return
 		}
 
-		c.Set("username", claims["username"]) // จัดเก็บข้อมูล username จาก Token
-		c.Next()                              // ส่งต่อ request ไปยัง handler ถัดไป
+		c.Set("username", claims["username"])
+		c.Next()
 	}
 }
 
 func main() {
-
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
 	if err != nil {
 		log.Fatal("ไม่สามารถเชื่อมต่อฐานข้อมูล: ", err)
@@ -88,7 +97,6 @@ func main() {
 			return
 		}
 
-		// Validation
 		emailRegex := regexp.MustCompile("^[a-zA-Z0-9._%+-]+@gmail\\.com$")
 		if !emailRegex.MatchString(user.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "อีเมลต้องเป็น @Gmail เท่านั้น"})
@@ -147,9 +155,47 @@ func main() {
 			return
 		}
 
-		// ปรับการตั้งคุกกี้ให้ทำงานใน HTTP หรือ HTTPS
 		c.SetCookie("auth_token", token, 3600, "/", "", false, true)
 		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
+	})
+
+	// จัดการสินค้า
+	r.GET("/products", func(c *gin.Context) {
+		rows, err := db.Query("SELECT * FROM products")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลได้: " + err.Error()})
+			return
+		}
+		defer rows.Close()
+
+		var products []Product
+		for rows.Next() {
+			var product Product
+			err := rows.Scan(&product.ID, &product.ProductNumber, &product.ProductName, &product.Category,
+				&product.Quantity, &product.UnitPrice, &product.Barcode, &product.StockStatus, &product.ImagePath)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอ่านข้อมูลได้: " + err.Error()})
+				return
+			}
+			products = append(products, product)
+		}
+		c.JSON(http.StatusOK, products)
+	})
+
+	r.POST("/products", func(c *gin.Context) {
+		var product Product
+		if err := c.ShouldBindJSON(&product); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลสินค้าไม่ถูกต้อง"})
+			return
+		}
+
+		query := "INSERT INTO products (product_number, product_name, category, quantity, unit_price, barcode, stock_status, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+		_, err := db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.UnitPrice, product.Barcode, product.StockStatus, product.ImagePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มสินค้าได้: " + err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
 	})
 
 	r.Run(":7070")

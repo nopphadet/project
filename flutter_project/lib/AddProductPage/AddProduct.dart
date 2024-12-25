@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-// ignore: depend_on_referenced_packages
 import 'package:barcode_scan2/barcode_scan2.dart';
-// ignore: depend_on_referenced_packages
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
@@ -26,7 +25,7 @@ class _AddProductPageState extends State<AddProductPage> {
   File? _image;
 
   // Function to add the product
-  void _addProduct() {
+  Future<void> _addProduct() async {
     if (_formKey.currentState!.validate()) {
       try {
         String productNumber = _productNumberController.text;
@@ -34,31 +33,67 @@ class _AddProductPageState extends State<AddProductPage> {
         String category = _categoryController.text;
         int quantity = int.parse(_quantityController.text);
         double unitPrice = double.parse(_unitPriceController.text);
+        String barcode = _barcodeController.text;
+        String stockStatus = _stockStatus;
 
-        double totalValue = quantity * unitPrice;
+        // Convert image to base64 if exists
+        String? imagePath;
+        if (_image != null) {
+          imagePath = base64Encode(await _image!.readAsBytes());
+        }
 
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(
-              'Product Added',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-            ),
-            content: Text(
-              'Product Number: $productNumber\nProduct: $productName\nCategory: $category\nQuantity: $quantity\nTotal Value: $totalValue\nStock Status: $_stockStatus',
-              style: TextStyle(fontSize: 16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('OK', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
+        // Create product object
+        Map<String, dynamic> product = {
+          "product_number": productNumber,
+          "product_name": productName,
+          "category": category,
+          "quantity": quantity,
+          "unit_price": unitPrice,
+          "barcode": barcode,
+          "stock_status": stockStatus,
+          "image_path": imagePath,
+        };
+
+        // Send data to the API
+        var url =
+            Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/products');
+        var response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(product),
         );
+
+        if (response.statusCode == 200) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(
+                'Product Added',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+              ),
+              content: Text(
+                'Product added successfully!\nResponse: ${response.body}',
+                style: TextStyle(fontSize: 16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('OK', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content:
+                    Text('Failed to add product. Response: ${response.body}')),
+          );
+        }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid input detected. Please try again.')),
+          SnackBar(content: Text('Invalid input detected. Error: $e')),
         );
       }
     }
