@@ -31,8 +31,18 @@ class _AddProductPageState extends State<AddProductPage> {
         String productNumber = _productNumberController.text;
         String productName = _productNameController.text;
         String category = _categoryController.text;
-        int quantity = int.parse(_quantityController.text);
-        double unitPrice = double.parse(_unitPriceController.text);
+
+        // Use tryParse to avoid exceptions
+        int? quantity = int.tryParse(_quantityController.text);
+        if (quantity == null) {
+          throw FormatException("Invalid quantity value");
+        }
+
+        double? unitPrice = double.tryParse(_unitPriceController.text);
+        if (unitPrice == null) {
+          throw FormatException("Invalid unit price value");
+        }
+
         String barcode = _barcodeController.text;
         String stockStatus = _stockStatus;
 
