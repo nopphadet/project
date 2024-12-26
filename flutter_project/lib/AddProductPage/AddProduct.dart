@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart'; // ใช้สำหรับตรวจสอบการเชื่อมต่อ
 
 class AddProductPage extends StatefulWidget {
   @override
@@ -18,78 +19,79 @@ class _AddProductPageState extends State<AddProductPage> {
   final TextEditingController _productNameController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _barcodeController = TextEditingController();
 
   String _stockStatus = 'ใช้งานได้';
   File? _image;
 
-  // Function to add the product
   Future<void> _addProduct() async {
     if (_formKey.currentState!.validate()) {
+      // ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต
+      var connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่พบการเชื่อมต่ออินเทอร์เน็ต')),
+        );
+        return;
+      }
+
       try {
-        String productNumber = _productNumberController.text;
-        String productName = _productNameController.text;
-        String category = _categoryController.text;
-
-        // Use tryParse to avoid exceptions
-        int? quantity = int.tryParse(_quantityController.text);
-        if (quantity == null) {
-          throw FormatException("Invalid quantity value");
-        }
-
-        double? unitPrice = double.tryParse(_unitPriceController.text);
-        if (unitPrice == null) {
-          throw FormatException("Invalid unit price value");
-        }
-
-        String barcode = _barcodeController.text;
+        String productNumber = _productNumberController.text.trim();
+        String productName = _productNameController.text.trim();
+        String category = _categoryController.text.trim();
+        int? quantity = int.tryParse(_quantityController.text.trim());
+        String barcode = _barcodeController.text.trim();
         String stockStatus = _stockStatus;
 
-        // Convert image to base64 if exists
-        String? imagePath;
-        if (_image != null) {
-          imagePath = base64Encode(await _image!.readAsBytes());
+        // ตรวจสอบว่า quantity ถูกต้อง
+        if (quantity == null || quantity < 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('จำนวนสินค้าต้องเป็นตัวเลขที่ไม่ติดลบ')),
+          );
+          return;
         }
 
-        // Create product object
-        Map<String, dynamic> product = {
-          "product_number": productNumber,
-          "product_name": productName,
-          "category": category,
-          "quantity": quantity,
-          "unit_price": unitPrice,
-          "barcode": barcode,
-          "stock_status": stockStatus,
-          "image_path": imagePath,
-        };
+        // ตรวจสอบว่ารหัสสินค้าซ้ำในระบบหรือไม่
+        var checkUrl = Uri.parse(
+            'https://hfm99nd8-7070.asse.devtunnels.ms/check_product/$productNumber');
+        var checkResponse = await http.get(checkUrl);
+        if (checkResponse.statusCode == 200 && checkResponse.body == 'exists') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('รหัสสินค้านี้มีอยู่ในระบบแล้ว')),
+          );
+          return;
+        }
 
-        // Send data to the API
-        var url =
+        // สร้างคำขอแบบ multipart
+        var uri =
             Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/products');
-        var response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(product),
-        );
+        var request = http.MultipartRequest('POST', uri)
+          ..fields['product_number'] = productNumber
+          ..fields['product_name'] = productName
+          ..fields['category'] = category
+          ..fields['quantity'] = quantity.toString() // ส่ง quantity เป็นตัวเลข
+          ..fields['barcode'] = barcode
+          ..fields['stock_status'] = stockStatus;
+
+        if (_image != null) {
+          var imageFile =
+              await http.MultipartFile.fromPath('image', _image!.path);
+          request.files.add(imageFile);
+        }
+
+        var response = await request.send();
 
         if (response.statusCode == 200) {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text(
-                'Product Added',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-              ),
-              content: Text(
-                'Product added successfully!\nResponse: ${response.body}',
-                style: TextStyle(fontSize: 16),
-              ),
+              title: Text('เพิ่มสำเร็จ',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Text('สินค้าเพิ่มเรียบร้อย!'),
               actions: [
                 TextButton(
+                  child: Text('ตกลง'),
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text('OK', style: TextStyle(color: Colors.red)),
                 ),
               ],
             ),
@@ -97,13 +99,12 @@ class _AddProductPageState extends State<AddProductPage> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content:
-                    Text('Failed to add product. Response: ${response.body}')),
+                content: Text('เพิ่มสินค้าล้มเหลว: ${response.reasonPhrase}')),
           );
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid input detected. Error: $e')),
+          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
         );
       }
     }
@@ -125,8 +126,7 @@ class _AddProductPageState extends State<AddProductPage> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Camera permission is required to scan barcode')),
+        SnackBar(content: Text('ต้องอนุญาตการเข้าถึงกล้องเพื่อสแกนบาร์โค้ด')),
       );
     }
   }
@@ -141,16 +141,16 @@ class _AddProductPageState extends State<AddProductPage> {
           _image = File(image.path);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image successfully selected!')),
+          SnackBar(content: Text('ถ่ายภาพสำเร็จ!')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No image selected')),
+          SnackBar(content: Text('ไม่ได้เลือกภาพ')),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Camera permission is required to pick image')),
+        SnackBar(content: Text('ต้องอนุญาตการเข้าถึงกล้องเพื่อถ่ายภาพ')),
       );
     }
   }
@@ -270,7 +270,7 @@ class _AddProductPageState extends State<AddProductPage> {
               ),
               SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _stockStatus, // ค่าต้องตรงกับ items
+                value: _stockStatus,
                 decoration: InputDecoration(
                   labelText: 'สถานะ',
                   border: OutlineInputBorder(),
@@ -313,7 +313,6 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
-  // Custom widget for building text fields
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,

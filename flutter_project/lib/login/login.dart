@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_project/AddProductPage/AddProduct.dart';
 // import 'package:flutter_project/Forgot%20password.dart';
 import 'package:flutter_project/ForgotPassword/ForgotPassword.dart';
 import 'package:flutter_project/register/register.dart';
@@ -138,7 +139,7 @@ class Login extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => login(context),
+                    onPressed: () => AddProductPage(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF880E4F),
                       padding: const EdgeInsets.symmetric(

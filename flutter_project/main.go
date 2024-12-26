@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	// "encoding/json"
 	"log"
 	"net/http"
 	"regexp"
@@ -25,15 +24,13 @@ type User struct {
 }
 
 type Product struct {
-	ID            uint    `json:"id"`
-	ProductNumber string  `json:"product_number"`
-	ProductName   string  `json:"product_name"`
-	Category      string  `json:"category"`
-	Quantity      int     `json:"quantity"`
-	UnitPrice     float64 `json:"unit_price"`
-	Barcode       string  `json:"barcode"`
-	StockStatus   string  `json:"stock_status"`
-	ImagePath     string  `json:"image_path"`
+	ProductNumber string `json:"product_number"`
+	ProductName   string `json:"product_name"`
+	Category      string `json:"category"`
+	Quantity      int    `json:"quantity"`
+	Barcode       string `json:"barcode"`
+	StockStatus   string `json:"stock_status"`
+	ImagePath     string `json:"image_path"`
 }
 
 func createToken(username string, duration time.Duration) (string, error) {
@@ -97,7 +94,7 @@ func main() {
 			return
 		}
 
-		emailRegex := regexp.MustCompile("^[a-zA-Z0-9._%+-]+@gmail\\.com$")
+		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@gmail.com$`)
 		if !emailRegex.MatchString(user.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "อีเมลต้องเป็น @Gmail เท่านั้น"})
 			return
@@ -149,52 +146,35 @@ func main() {
 			return
 		}
 
+		// Generate JWT token
 		token, err := createToken(loginData.Username, time.Hour*24)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง Token ได้"})
 			return
 		}
 
+		// Set token in cookie
 		c.SetCookie("auth_token", token, 3600, "/", "", false, true)
 		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
 	})
 
 	// จัดการสินค้า
-	r.GET("/products", func(c *gin.Context) {
-		rows, err := db.Query("SELECT * FROM products")
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลได้: " + err.Error()})
-			return
-		}
-		defer rows.Close()
-
-		var products []Product
-		for rows.Next() {
-			var product Product
-			err := rows.Scan(&product.ID, &product.ProductNumber, &product.ProductName, &product.Category,
-				&product.Quantity, &product.UnitPrice, &product.Barcode, &product.StockStatus, &product.ImagePath)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอ่านข้อมูลได้: " + err.Error()})
-				return
-			}
-			products = append(products, product)
-		}
-		c.JSON(http.StatusOK, products)
-	})
-
-	r.POST("/products", func(c *gin.Context) {
+	r.POST("/products", authMiddleware(), func(c *gin.Context) {
 		var product Product
 		if err := c.ShouldBindJSON(&product); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลสินค้าไม่ถูกต้อง"})
 			return
 		}
 
-		query := "INSERT INTO products (product_number, product_name, category, quantity, unit_price, barcode, stock_status, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-		_, err := db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.UnitPrice, product.Barcode, product.StockStatus, product.ImagePath)
+		query := `INSERT INTO products (product_number, product_name, category, quantity, barcode, stock_status, image_path, created_at) 
+				  VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+
+		_, err := db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, product.ImagePath)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มสินค้าได้: " + err.Error()})
 			return
 		}
+
 		c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
 	})
 
