@@ -44,29 +44,53 @@ func createToken(username string, duration time.Duration) (string, error) {
 
 func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenString, err := c.Cookie("auth_token")
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ, ไม่พบ Token"})
-			c.Abort()
-			return
+		// ดึง Token จาก Header
+		tokenString := c.GetHeader("Authorization")
+		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+			tokenString = tokenString[7:] // เอา "Bearer " ออก
+		} else {
+			// ลองดึง Token จาก Cookie
+			var err error
+			tokenString, err = c.Cookie("auth_token")
+			if err != nil {
+				log.Println("Token ไม่พบใน Header และ Cookie:", err)
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ, ไม่พบ Token"})
+				c.Abort()
+				return
+			}
 		}
 
+		// Debug Token ที่ได้รับ
+		log.Println("Token ที่ได้รับ:", tokenString)
+
+		// ตรวจสอบความถูกต้องของ Token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				log.Println("รูปแบบ Token ไม่ถูกต้อง:", token.Header["alg"])
+				return nil, jwt.ErrSignatureInvalid
+			}
 			return []byte(jwtSecretKey), nil
 		})
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง หรือหมดอายุ"})
+			log.Println("Token ไม่ถูกต้องหรือหมดอายุ:", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้องหรือหมดอายุ"})
 			c.Abort()
 			return
 		}
 
+		// ดึงข้อมูล Claims
 		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
+		if !ok || !token.Valid {
+			log.Println("ดึง Claims จาก Token ไม่สำเร็จ")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
 			c.Abort()
 			return
 		}
 
+		// Debug ข้อมูล Claims
+		log.Println("Claims ที่ดึงได้:", claims)
+
+		// ตั้งค่า Context เพื่อใช้ใน Endpoint อื่น
 		c.Set("username", claims["username"])
 		c.Next()
 	}

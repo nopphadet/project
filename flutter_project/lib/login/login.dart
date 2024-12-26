@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_project/AddProductPage/AddProduct.dart';
-// import 'package:flutter_project/Forgot%20password.dart';
 import 'package:flutter_project/ForgotPassword/ForgotPassword.dart';
 import 'package:flutter_project/register/register.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// ignore: depend_on_referenced_packages
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class Login extends StatelessWidget {
@@ -13,11 +11,14 @@ class Login extends StatelessWidget {
   final TextEditingController passwordController = TextEditingController();
   final storage = FlutterSecureStorage(); // Secure storage for token
 
+  // ฟังก์ชันสำหรับล็อกอิน
   Future<void> login(BuildContext context) async {
     final String username = usernameController.text;
     final String password = passwordController.text;
 
-    final url = Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/login');
+    final url = Uri.parse(
+        'https://hfm99nd8-7070.asse.devtunnels.ms/login'); // URL ของ API
+
     try {
       final response = await http.post(
         url,
@@ -27,9 +28,19 @@ class Login extends StatelessWidget {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await storage.write(key: 'token', value: data['token']); // Save token
+        await storage.write(key: 'token', value: data['token']); // เก็บ token
+
+        // แสดงข้อความว่าเข้าสู่ระบบสำเร็จ
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
+        );
+
+        // นำไปหน้า AddProductPage เมื่อเข้าสู่ระบบสำเร็จ
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  AddProductPage()), // เปลี่ยนเป็นหน้า AddProductPage
         );
       } else {
         final error = jsonDecode(response.body);
@@ -126,7 +137,9 @@ class Login extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ContactAdmin()),
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                ContactAdmin()), // ปรับให้ไปหน้า ForgotPassword
                       );
                     },
                     child: const Text(
@@ -139,7 +152,7 @@ class Login extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => AddProductPage(),
+                    onPressed: () => login(context), // เรียกใช้ฟังก์ชัน login()
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF880E4F),
                       padding: const EdgeInsets.symmetric(
@@ -151,7 +164,7 @@ class Login extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
-                      'เข้าสู้ระบบ',
+                      'เข้าสู่ระบบ',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -171,7 +184,8 @@ class Login extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const Register()),
+                                builder: (context) =>
+                                    const Register()), // ไปหน้า Register
                           );
                         },
                         child: const Text(
