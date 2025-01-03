@@ -5,7 +5,6 @@ import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart'; // ใช้สำหรับตรวจสอบการเชื่อมต่อ
-import 'package:shared_preferences/shared_preferences.dart'; // สำหรับจัดการ SharedPreferences
 
 class AddProductPage extends StatefulWidget {
   @override
@@ -51,27 +50,6 @@ class _AddProductPageState extends State<AddProductPage> {
           return;
         }
 
-        // ตรวจสอบว่ารหัสสินค้าซ้ำในระบบหรือไม่
-        var checkUrl = Uri.parse(
-            'https://hfm99nd8-7070.asse.devtunnels.ms/check_product/$productNumber');
-        var checkResponse = await http.get(checkUrl);
-        if (checkResponse.statusCode == 200 && checkResponse.body == 'exists') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('รหัสสินค้านี้มีอยู่ในระบบแล้ว')),
-          );
-          return;
-        }
-
-        // ดึง Token จากที่เก็บข้อมูล (เช่น SharedPreferences หรือจากการล็อกอิน)
-        String? token = await getTokenFromSharedPreferences();
-
-        if (token == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ไม่พบ Token')),
-          );
-          return;
-        }
-
         // สร้างคำขอแบบ multipart
         var uri =
             Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/products');
@@ -79,12 +57,9 @@ class _AddProductPageState extends State<AddProductPage> {
           ..fields['product_number'] = productNumber
           ..fields['product_name'] = productName
           ..fields['category'] = category
-          ..fields['quantity'] = quantity.toString() // ส่ง quantity เป็นตัวเลข
+          ..fields['quantity'] = quantity.toString()
           ..fields['barcode'] = barcode
           ..fields['stock_status'] = stockStatus;
-
-        // เพิ่ม Authorization token ใน headers
-        request.headers['Authorization'] = 'Bearer $token';
 
         if (_image != null) {
           var imageFile =
@@ -92,9 +67,10 @@ class _AddProductPageState extends State<AddProductPage> {
           request.files.add(imageFile);
         }
 
-        var response = await request.send();
+        var response = await request.send().timeout(Duration(seconds: 10));
 
         if (response.statusCode == 200) {
+          _clearForm();
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -110,17 +86,29 @@ class _AddProductPageState extends State<AddProductPage> {
             ),
           );
         } else {
+          String responseBody = await response.stream.bytesToString();
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('เพิ่มสินค้าล้มเหลว: ${response.reasonPhrase}')),
+            SnackBar(content: Text('เพิ่มสินค้าล้มเหลว: $responseBody')),
           );
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+          SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.runtimeType}')),
         );
       }
     }
+  }
+
+  void _clearForm() {
+    _productNumberController.clear();
+    _productNameController.clear();
+    _categoryController.clear();
+    _quantityController.clear();
+    _barcodeController.clear();
+    setState(() {
+      _image = null;
+      _stockStatus = 'ใช้งานได้';
+    });
   }
 
   Future<void> scanBarcode() async {
@@ -346,11 +334,5 @@ class _AddProductPageState extends State<AddProductPage> {
       keyboardType: keyboardType,
       validator: validator,
     );
-  }
-
-  // ฟังก์ชันดึง Token จาก SharedPreferences (หรือที่จัดเก็บอื่นๆ)
-  Future<String?> getTokenFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token'); // หรือต้องระบุชื่อที่เหมาะสม
   }
 }

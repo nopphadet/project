@@ -5,16 +5,13 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"time"
+	"strconv" // Import strconv for converting string to int
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 
 	_ "github.com/go-sql-driver/mysql"
 )
-
-const jwtSecretKey = "your_secret_key"
 
 type User struct {
 	Username string `json:"username" binding:"required,alpha"`
@@ -23,96 +20,23 @@ type User struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-type Product struct {
-	ProductNumber string `json:"product_number"`
-	ProductName   string `json:"product_name"`
-	Category      string `json:"category"`
-	Quantity      int    `json:"quantity"`
-	Barcode       string `json:"barcode"`
-	StockStatus   string `json:"stock_status"`
-	ImagePath     string `json:"image_path"`
-}
-
-func createToken(username string, duration time.Duration) (string, error) {
-	claims := jwt.MapClaims{
-		"username": username,
-		"exp":      time.Now().Add(duration).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(jwtSecretKey))
-}
-
-func authMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// ดึง Token จาก Header
-		tokenString := c.GetHeader("Authorization")
-		log.Println("Authorization header:", tokenString)
-		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
-			tokenString = tokenString[7:] // เอา "Bearer " ออก
-		} else {
-			// ลองดึง Token จาก Cookie
-			var err error
-			tokenString, err = c.Cookie("auth_token")
-			log.Println("Cookie auth_token:", tokenString) // log ค่า Cookie auth_token
-			if err != nil {
-				log.Println("Token ไม่พบใน Header และ Cookie:", err)
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ, ไม่พบ Token"})
-				c.Abort()
-				return
-			}
-		}
-
-		// Debug Token ที่ได้รับ
-		log.Println("Token ที่ได้รับ:", tokenString)
-
-		// ตรวจสอบความถูกต้องของ Token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				log.Println("รูปแบบ Token ไม่ถูกต้อง:", token.Header["alg"])
-				return nil, jwt.ErrSignatureInvalid
-			}
-			return []byte(jwtSecretKey), nil
-		})
-		if err != nil || !token.Valid {
-			log.Println("Token ไม่ถูกต้องหรือหมดอายุ:", err)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้องหรือหมดอายุ"})
-			c.Abort()
-			return
-		}
-
-		// ดึงข้อมูล Claims
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || !token.Valid {
-			log.Println("ดึง Claims จาก Token ไม่สำเร็จ")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token ไม่ถูกต้อง"})
-			c.Abort()
-			return
-		}
-
-		// Debug ข้อมูล Claims
-		log.Println("Claims ที่ดึงได้:", claims)
-
-		// ตั้งค่า Context เพื่อใช้ใน Endpoint อื่น
-		c.Set("username", claims["username"])
-		c.Next()
-	}
-}
-
 func main() {
+	// เชื่อมต่อกับฐานข้อมูล MySQL
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
 	if err != nil {
-		log.Fatal("ไม่สามารถเชื่อมต่อฐานข้อมูล: ", err)
+		log.Fatalf("ไม่สามารถเชื่อมต่อฐานข้อมูล: %v", err)
 	}
 	defer db.Close()
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("การเชื่อมต่อฐานข้อมูลล้มเหลว: ", err)
+	// ทดสอบการเชื่อมต่อ
+	if err := db.Ping(); err != nil {
+		log.Fatalf("การเชื่อมต่อฐานข้อมูลล้มเหลว: %v", err)
 	}
 
+	// สร้าง Router สำหรับ Gin
 	r := gin.Default()
 
-	// สมัครสมาชิก
+	// API สมัครสมาชิก
 	r.POST("/register", func(c *gin.Context) {
 		var user User
 		if err := c.ShouldBindJSON(&user); err != nil {
@@ -120,6 +44,7 @@ func main() {
 			return
 		}
 
+		// ตรวจสอบอีเมลและเบอร์โทร
 		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@gmail.com$`)
 		if !emailRegex.MatchString(user.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "อีเมลต้องเป็น @Gmail เท่านั้น"})
@@ -132,15 +57,16 @@ func main() {
 			return
 		}
 
+		// เข้ารหัสรหัสผ่าน
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการเข้ารหัสรหัสผ่าน"})
 			return
 		}
 
+		// SQL สำหรับบันทึกผู้ใช้งาน
 		query := "INSERT INTO users (username, email, phone, password) VALUES (?, ?, ?, ?)"
-		_, err = db.Exec(query, user.Username, user.Email, user.Phone, string(hashedPassword))
-		if err != nil {
+		if _, err := db.Exec(query, user.Username, user.Email, user.Phone, string(hashedPassword)); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถบันทึกข้อมูลได้: " + err.Error()})
 			return
 		}
@@ -148,7 +74,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "สมัครสมาชิกสำเร็จ"})
 	})
 
-	// เข้าสู่ระบบ
+	// API เข้าสู่ระบบ
 	r.POST("/login", func(c *gin.Context) {
 		var loginData struct {
 			Username string `json:"username" binding:"required"`
@@ -161,8 +87,7 @@ func main() {
 
 		var hashedPassword string
 		query := "SELECT password FROM users WHERE username = ?"
-		err := db.QueryRow(query, loginData.Username).Scan(&hashedPassword)
-		if err != nil {
+		if err := db.QueryRow(query, loginData.Username).Scan(&hashedPassword); err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
 			return
 		}
@@ -175,51 +100,61 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ"})
 	})
 
-	// จัดการสินค้า
-	r.POST("/products", authMiddleware(), func(c *gin.Context) {
-		var product Product
-		if err := c.ShouldBindJSON(&product); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลสินค้าไม่ถูกต้อง"})
+	// API เพิ่มสินค้า
+	r.POST("/products", func(c *gin.Context) {
+		type Product struct {
+			ProductNumber string `json:"product_number" binding:"required"`
+			ProductName   string `json:"product_name" binding:"required"`
+			Category      string `json:"category" binding:"required"`
+			Quantity      int    `json:"quantity" binding:"required"`
+			Barcode       string `json:"barcode" binding:"required"`
+			StockStatus   string `json:"stock_status" binding:"required"`
+		}
+
+		// ดึงข้อมูลจาก form
+		quantityStr := c.DefaultPostForm("quantity", "0") // Get the quantity as a string
+		quantity, err := strconv.Atoi(quantityStr)        // Convert the string to an integer
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid quantity"})
 			return
 		}
 
+		product := Product{
+			ProductNumber: c.DefaultPostForm("product_number", ""),
+			ProductName:   c.DefaultPostForm("product_name", ""),
+			Category:      c.DefaultPostForm("category", ""),
+			Quantity:      quantity, // Set the quantity field after conversion
+			Barcode:       c.DefaultPostForm("barcode", ""),
+			StockStatus:   c.DefaultPostForm("stock_status", ""),
+		}
+
+		// รับไฟล์รูปภาพ
+		file, _ := c.FormFile("image")
+		imagePath := "./uploads/" + file.Filename
+		if err := c.SaveUploadedFile(file, imagePath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถบันทึกรูปภาพได้"})
+			return
+		}
+
+		// SQL สำหรับบันทึกข้อมูลสินค้า
 		query := `INSERT INTO products (product_number, product_name, category, quantity, barcode, stock_status, image_path, created_at) 
 				  VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
 
-		_, err := db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, product.ImagePath)
+		// Log the query and parameters
+		log.Printf("Executing query: %s\nWith parameters: %v\n", query, []interface{}{
+			product.ProductNumber, product.ProductName, product.Category, product.Quantity,
+			product.Barcode, product.StockStatus, imagePath,
+		})
+		_, err = db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, imagePath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มสินค้าได้: " + err.Error()})
+			log.Println("Error inserting product:", err) // Log the error
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มสินค้าได้"})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
 	})
 
-	r.GET("/check_product/:id", func(c *gin.Context) {
-		// ดึงค่า id จาก URL
-		productID := c.Param("id")
-
-		// สร้างตัวแปร Product สำหรับเก็บข้อมูลสินค้า
-		var product Product
-
-		// เขียนคำสั่ง SQL เพื่อดึงข้อมูลสินค้าจากฐานข้อมูล
-		query := "SELECT product_number, product_name, category, quantity, barcode, stock_status, image_path FROM products WHERE product_number = ?"
-		err := db.QueryRow(query, productID).Scan(&product.ProductNumber, &product.ProductName, &product.Category, &product.Quantity, &product.Barcode, &product.StockStatus, &product.ImagePath)
-
-		if err != nil {
-			if err == sql.ErrNoRows {
-				// ถ้าไม่พบข้อมูลสินค้า
-				c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบข้อมูลสินค้า"})
-			} else {
-				// ถ้ามีข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการดึงข้อมูล"})
-			}
-			return
-		}
-
-		// ส่งข้อมูลสินค้าออกไป
-		c.JSON(http.StatusOK, product)
-	})
-
+	// รันเซิร์ฟเวอร์ที่พอร์ต 7070
 	r.Run(":7070")
 }
