@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-// import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart'; // ใช้สำหรับตรวจสอบการเชื่อมต่อ
+import 'package:shared_preferences/shared_preferences.dart'; // สำหรับจัดการ SharedPreferences
 
 class AddProductPage extends StatefulWidget {
   @override
@@ -62,6 +62,16 @@ class _AddProductPageState extends State<AddProductPage> {
           return;
         }
 
+        // ดึง Token จากที่เก็บข้อมูล (เช่น SharedPreferences หรือจากการล็อกอิน)
+        String? token = await getTokenFromSharedPreferences();
+
+        if (token == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ไม่พบ Token')),
+          );
+          return;
+        }
+
         // สร้างคำขอแบบ multipart
         var uri =
             Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/products');
@@ -72,6 +82,9 @@ class _AddProductPageState extends State<AddProductPage> {
           ..fields['quantity'] = quantity.toString() // ส่ง quantity เป็นตัวเลข
           ..fields['barcode'] = barcode
           ..fields['stock_status'] = stockStatus;
+
+        // เพิ่ม Authorization token ใน headers
+        request.headers['Authorization'] = 'Bearer $token';
 
         if (_image != null) {
           var imageFile =
@@ -333,5 +346,11 @@ class _AddProductPageState extends State<AddProductPage> {
       keyboardType: keyboardType,
       validator: validator,
     );
+  }
+
+  // ฟังก์ชันดึง Token จาก SharedPreferences (หรือที่จัดเก็บอื่นๆ)
+  Future<String?> getTokenFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token'); // หรือต้องระบุชื่อที่เหมาะสม
   }
 }

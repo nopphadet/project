@@ -46,12 +46,14 @@ func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// ดึง Token จาก Header
 		tokenString := c.GetHeader("Authorization")
+		log.Println("Authorization header:", tokenString)
 		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
 			tokenString = tokenString[7:] // เอา "Bearer " ออก
 		} else {
 			// ลองดึง Token จาก Cookie
 			var err error
 			tokenString, err = c.Cookie("auth_token")
+			log.Println("Cookie auth_token:", tokenString) // log ค่า Cookie auth_token
 			if err != nil {
 				log.Println("Token ไม่พบใน Header และ Cookie:", err)
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่ได้เข้าสู่ระบบ, ไม่พบ Token"})
@@ -170,16 +172,7 @@ func main() {
 			return
 		}
 
-		// Generate JWT token
-		token, err := createToken(loginData.Username, time.Hour*24)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง Token ได้"})
-			return
-		}
-
-		// Set token in cookie
-		c.SetCookie("auth_token", token, 3600, "/", "", false, true)
-		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ", "token": token})
+		c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ"})
 	})
 
 	// จัดการสินค้า
@@ -200,6 +193,32 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
+	})
+
+	r.GET("/check_product/:id", func(c *gin.Context) {
+		// ดึงค่า id จาก URL
+		productID := c.Param("id")
+
+		// สร้างตัวแปร Product สำหรับเก็บข้อมูลสินค้า
+		var product Product
+
+		// เขียนคำสั่ง SQL เพื่อดึงข้อมูลสินค้าจากฐานข้อมูล
+		query := "SELECT product_number, product_name, category, quantity, barcode, stock_status, image_path FROM products WHERE product_number = ?"
+		err := db.QueryRow(query, productID).Scan(&product.ProductNumber, &product.ProductName, &product.Category, &product.Quantity, &product.Barcode, &product.StockStatus, &product.ImagePath)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// ถ้าไม่พบข้อมูลสินค้า
+				c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบข้อมูลสินค้า"})
+			} else {
+				// ถ้ามีข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการดึงข้อมูล"})
+			}
+			return
+		}
+
+		// ส่งข้อมูลสินค้าออกไป
+		c.JSON(http.StatusOK, product)
 	})
 
 	r.Run(":7070")

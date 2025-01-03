@@ -13,11 +13,17 @@ class Login extends StatelessWidget {
 
   // ฟังก์ชันสำหรับล็อกอิน
   Future<void> login(BuildContext context) async {
-    final String username = usernameController.text;
-    final String password = passwordController.text;
+    final String username = usernameController.text.trim();
+    final String password = passwordController.text.trim();
 
-    final url = Uri.parse(
-        'https://hfm99nd8-7070.asse.devtunnels.ms/login'); // URL ของ API
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วน')),
+      );
+      return;
+    }
+
+    final url = Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/login');
 
     try {
       final response = await http.post(
@@ -28,29 +34,25 @@ class Login extends StatelessWidget {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await storage.write(key: 'token', value: data['token']); // เก็บ token
+        await storage.write(key: 'token', value: data['token']);
 
-        // แสดงข้อความว่าเข้าสู่ระบบสำเร็จ
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
         );
 
-        // นำไปหน้า AddProductPage เมื่อเข้าสู่ระบบสำเร็จ
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  AddProductPage()), // เปลี่ยนเป็นหน้า AddProductPage
+          MaterialPageRoute(builder: (context) => AddProductPage()),
         );
       } else {
         final error = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error['error'])),
+          SnackBar(content: Text(error['error'] ?? 'ไม่สามารถเข้าสู่ระบบได้')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+        SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.toString()}')),
       );
     }
   }
@@ -137,9 +139,7 @@ class Login extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (context) =>
-                                ContactAdmin()), // ปรับให้ไปหน้า ForgotPassword
+                        MaterialPageRoute(builder: (context) => ContactAdmin()),
                       );
                     },
                     child: const Text(
@@ -152,7 +152,7 @@ class Login extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => login(context), // เรียกใช้ฟังก์ชัน login()
+                    onPressed: () => login(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF880E4F),
                       padding: const EdgeInsets.symmetric(
@@ -183,9 +183,7 @@ class Login extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const Register()), // ไปหน้า Register
+                            MaterialPageRoute(builder: (context) => Register()),
                           );
                         },
                         child: const Text(
