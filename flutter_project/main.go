@@ -5,8 +5,7 @@ import (
 	"log"
 
 	// "net/http"
-	login "newmos/newmos_api/golanglogin"
-	products "newmos/newmos_api/golangnewproducts"
+
 	register "newmos/newmos_api/golangregister"
 
 	// "regexp"
@@ -20,9 +19,9 @@ import (
 )
 
 func main() {
-	products.Product()
-	login.Login()
-	register.Register()
+	//products.Product()
+	register.Inint()
+	// register.Register()
 
 	// เชื่อมต่อกับฐานข้อมูล MySQL
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
