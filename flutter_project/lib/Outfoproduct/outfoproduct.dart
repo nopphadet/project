@@ -13,7 +13,6 @@ class _OutfoproductState extends State<Outfoproduct> {
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _recipientController = TextEditingController();
-  String? _selectedProduct;
 
   @override
   void dispose() {
