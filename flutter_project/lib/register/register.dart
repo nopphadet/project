@@ -79,8 +79,8 @@ class SignupScreen extends StatelessWidget {
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFF4A148C),
-                Color(0xFF880E4F),
+                Color.fromARGB(255, 255, 0, 0),
+                Color.fromARGB(255, 255, 255, 255),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -91,22 +91,23 @@ class SignupScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 20),
               const Icon(Icons.person_add_alt_1,
-                  size: 100, color: Colors.white),
+                  size: 100, color: Color.fromARGB(255, 255, 255, 255)),
               const SizedBox(height: 20),
               const Text(
                 'สมัครสมาชิก',
                 style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                    color: Color.fromARGB(255, 0, 0, 0)),
               ),
               const SizedBox(height: 10),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.0),
                 child: Text(
-                  'กรุณากรอกข้อมูลเพื่อสร้างบัญชีใหม่เพื่อใช้บริการของเรา.',
+                  'กรุณากรอกข้อมูลเพื่อสร้างบัญชีใหม่เพื่อใช้บริการของเรา',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 16, color: Color.fromARGB(255, 0, 0, 0)),
                 ),
               ),
               const SizedBox(height: 30),

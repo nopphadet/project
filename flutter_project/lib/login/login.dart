@@ -65,8 +65,8 @@ class Login extends StatelessWidget {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFF4A148C),
-              Color(0xFF880E4F),
+              Color.fromARGB(255, 255, 0, 0),
+              Color.fromARGB(255, 255, 255, 255),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -91,7 +91,7 @@ class Login extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Color.fromARGB(255, 0, 0, 0),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -99,7 +99,7 @@ class Login extends StatelessWidget {
                     'เข้าสู่ระบบบัญชีของคุณ',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white70,
+                      color: Color.fromARGB(179, 0, 0, 0),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -109,7 +109,7 @@ class Login extends StatelessWidget {
                       labelText: 'Username',
                       prefixIcon: const Icon(Icons.person),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: const Color.fromARGB(255, 255, 255, 255),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -124,7 +124,7 @@ class Login extends StatelessWidget {
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: const Color.fromARGB(255, 255, 255, 255),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -133,7 +133,7 @@ class Login extends StatelessWidget {
                   ),
                   const Text(
                     "คุณลืมบัญชีใช่ไหม",
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
                   ),
                   TextButton(
                     onPressed: () {
@@ -145,7 +145,7 @@ class Login extends StatelessWidget {
                     child: const Text(
                       'ลืมรหัสผ่าน',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color.fromARGB(255, 0, 0, 0),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -154,7 +154,7 @@ class Login extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () => login(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF880E4F),
+                      backgroundColor: const Color.fromARGB(255, 209, 42, 42),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 100,
                         vertical: 15,
@@ -166,7 +166,7 @@ class Login extends StatelessWidget {
                     child: const Text(
                       'เข้าสู่ระบบ',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color.fromARGB(255, 255, 255, 255),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -177,7 +177,7 @@ class Login extends StatelessWidget {
                     children: [
                       const Text(
                         "ยังไม่มีบัญชีใช่ไหม",
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
                       ),
                       TextButton(
                         onPressed: () {
@@ -189,7 +189,7 @@ class Login extends StatelessWidget {
                         child: const Text(
                           'ลงทะเบียน',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Color.fromARGB(255, 0, 0, 0),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
