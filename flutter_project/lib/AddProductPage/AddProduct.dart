@@ -127,7 +127,8 @@ class _AddProductPageState extends State<AddProductPage> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ต้องอนุญาตการเข้าถึงกล้องเพื่อสแกนบาร์โค้ด')),
+        SnackBar(
+            content: Text('Camera permission is required to scan barcode')),
       );
     }
   }
@@ -142,16 +143,16 @@ class _AddProductPageState extends State<AddProductPage> {
           _image = File(image.path);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ถ่ายภาพสำเร็จ!')),
+          SnackBar(content: Text('Image successfully selected!')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ไม่ได้เลือกภาพ')),
+          SnackBar(content: Text('No image selected')),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ต้องอนุญาตการเข้าถึงกล้องเพื่อถ่ายภาพ')),
+        SnackBar(content: Text('Camera permission is required to pick image')),
       );
     }
   }
@@ -161,7 +162,7 @@ class _AddProductPageState extends State<AddProductPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('เพิ่มสินค้า'),
-        backgroundColor: Colors.teal,
+        backgroundColor: const Color.fromARGB(255, 250, 2, 2),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -170,6 +171,42 @@ class _AddProductPageState extends State<AddProductPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              SizedBox(height: 30),
+              const Text(
+                'หมวดหมู่',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                ),
+              ),
+              SizedBox(height: 25),
+              _buildTextFormField(
+                controller: _productNumberController,
+                label: 'รหัสสินค้า',
+                icon: Icons.code,
+                keyboardType: TextInputType.text,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'โปรดใส่รหัสสินค้า';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 19),
+              _buildTextFormField(
+                controller: _productNameController,
+                label: 'ชื่อสินค้า',
+                icon: Icons.production_quantity_limits,
+                keyboardType: TextInputType.text,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'โปรดใส่ชื่อสินค้า';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
@@ -191,7 +228,7 @@ class _AddProductPageState extends State<AddProductPage> {
                           child: Text(
                             'กดที่นี่เพื่อถ่ายภาพ',
                             style: TextStyle(
-                              color: Colors.teal,
+                              color: const Color.fromARGB(255, 255, 0, 0),
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -201,32 +238,6 @@ class _AddProductPageState extends State<AddProductPage> {
                 ),
               ),
               SizedBox(height: 20),
-              _buildTextFormField(
-                controller: _productNumberController,
-                label: 'รหัสสินค้า',
-                icon: Icons.code,
-                keyboardType: TextInputType.text,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'โปรดใส่รหัสสินค้า';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              _buildTextFormField(
-                controller: _productNameController,
-                label: 'ชื่อสินค้า',
-                icon: Icons.production_quantity_limits,
-                keyboardType: TextInputType.text,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'โปรดใส่ชื่อสินค้า';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
               _buildTextFormField(
                 controller: _categoryController,
                 label: 'หมวดหมู่',
@@ -261,7 +272,8 @@ class _AddProductPageState extends State<AddProductPage> {
                   labelText: 'หมายเลขบาร์โค้ดสินค้า',
                   border: OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(Icons.qr_code_scanner),
+                    icon: Icon(Icons.qr_code_scanner,
+                        color: const Color.fromARGB(255, 250, 2, 2)),
                     onPressed: scanBarcode,
                   ),
                 ),
@@ -276,7 +288,8 @@ class _AddProductPageState extends State<AddProductPage> {
                   labelText: 'สถานะ',
                   border: OutlineInputBorder(),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.teal),
+                    borderSide:
+                        BorderSide(color: const Color.fromARGB(255, 255, 0, 0)),
                   ),
                 ),
                 items: ['ใช้งานได้', 'สินค้าเสีย'].map((String value) {
@@ -296,10 +309,13 @@ class _AddProductPageState extends State<AddProductPage> {
                 onPressed: _addProduct,
                 child: Text(
                   'เพิ่มสินค้า',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
+                  backgroundColor: const Color.fromARGB(255, 255, 0, 0),
                   padding: EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -314,6 +330,7 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
+  // Custom widget for building text fields
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,
@@ -327,9 +344,9 @@ class _AddProductPageState extends State<AddProductPage> {
         labelText: label,
         border: OutlineInputBorder(),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.teal),
+          borderSide: BorderSide(color: const Color.fromARGB(255, 255, 0, 0)),
         ),
-        prefixIcon: Icon(icon, color: Colors.teal),
+        prefixIcon: Icon(icon, color: const Color.fromARGB(255, 250, 2, 2)),
       ),
       keyboardType: keyboardType,
       validator: validator,
