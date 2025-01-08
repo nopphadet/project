@@ -1,4 +1,5 @@
-package UpdateProduct
+package updateProduct
+
 import (
 	// "database/sql"
 	"database/sql"
