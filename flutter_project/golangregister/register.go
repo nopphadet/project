@@ -28,6 +28,7 @@ func Inint() {
 	r.POST("/register", Register)
 	r.POST("/login", login.Login)
 	r.POST("/products", products.Product)
+	r.POST("/updateProduct")
 	r.Run(":7070")
 }
 

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:barcode_scan2/barcode_scan2.dart';
 
@@ -24,6 +26,40 @@ class _OutfoproductState extends State<Outfoproduct> {
     super.dispose();
   }
 
+  Future<void> _submitDataToAPI() async {
+    final String apiUrl =
+        "https://hfm99nd8-7070.asse.devtunnels.ms/updateProduct";
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "barcode": _searchController.text,
+          "quantity": int.tryParse(_quantityController.text) ?? 0,
+          "recipient_name": _recipientController.text,
+          "receipt_date": _dateController.text,
+          "remarks": _remarksController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('บันทึกข้อมูลสำเร็จ!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาด: ${response.body}')),
+        );
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ไม่สามารถเชื่อมต่อ API ได้: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +74,6 @@ class _OutfoproductState extends State<Outfoproduct> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSearchField(),
-              SizedBox(height: 20),
               SizedBox(height: 20),
               _buildTextField(
                 labelText: 'จำนวนที่เบิก',
@@ -159,7 +194,7 @@ class _OutfoproductState extends State<Outfoproduct> {
         if (pickedDate != null) {
           setState(() {
             _dateController.text =
-                "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+                "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
           });
         }
       },
@@ -224,9 +259,7 @@ class _OutfoproductState extends State<Outfoproduct> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('บันทึกข้อมูลเรียบร้อย')),
-    );
+    _submitDataToAPI();
   }
 
   void _onCancel() {
