@@ -1,5 +1,4 @@
-package updateProduct
-
+package UpdateProduct
 import (
 	// "database/sql"
 	"database/sql"
@@ -56,7 +55,6 @@ func UpdateProductQuantity(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "อัปเดตจำนวนสินค้าสำเร็จ"})
 }
-
 
 func CreateGoodsReceipt(c *gin.Context) {
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
