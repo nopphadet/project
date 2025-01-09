@@ -12,8 +12,9 @@ import (
 
 	// "strconv" // Import strconv for converting string to int
 
-	login "newmos/newmos_api/golanglogin"
-	products "newmos/newmos_api/golangnewproducts"
+	// login "newmos/newmos_api/golanglogin"
+	// products "newmos/newmos_api/golangnewproducts"
+	// updateProduct "newmos/newmos_api/golangupdateProduct"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -23,14 +24,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func Inint() {
-	r := gin.Default()
-	r.POST("/register", Register)
-	r.POST("/login", login.Login)
-	r.POST("/products", products.Product)
-	r.POST("/updateProduct")
-	r.Run(":7070")
-}
 
 func Register(c *gin.Context) {
 	type User struct {

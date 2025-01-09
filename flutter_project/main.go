@@ -6,7 +6,7 @@ import (
 
 	// "net/http"
 
-	register "newmos/newmos_api/golangregister"
+	// register "newmos/newmos_api/golangregister"
 
 	// "regexp"
 
@@ -18,9 +18,19 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+func Init() {
+	r := gin.Default()
+	r.POST("/register")
+	r.POST("/login")
+	r.POST("/products")
+	r.GET("/products/search")
+
+	r.Run(":7070")
+}
+
 func main() {
 	//products.Product()
-	register.Inint()
+	Init()
 	// register.Register()
 
 	// เชื่อมต่อกับฐานข้อมูล MySQL

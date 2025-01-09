@@ -16,6 +16,8 @@ class _OutfoproductState extends State<Outfoproduct> {
   final TextEditingController _remarksController = TextEditingController();
   final TextEditingController _recipientController = TextEditingController();
 
+  Map<String, dynamic>? _productData;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -26,37 +28,113 @@ class _OutfoproductState extends State<Outfoproduct> {
     super.dispose();
   }
 
-  Future<void> _submitDataToAPI() async {
-    final String apiUrl =
-        "https://hfm99nd8-7070.asse.devtunnels.ms/updateProduct";
+  // Search or Load Product
+  Future<void> _searchAndLoadProduct() async {
     try {
-      final response = await http.post(
-        Uri.parse(apiUrl),
+      final response = await http.get(
+        Uri.parse(
+            'https://hfm99nd8-7070.asse.devtunnels.ms/products/search?barcode=${_searchController.text}'),
         headers: {
           "Content-Type": "application/json",
         },
-        body: jsonEncode({
-          "barcode": _searchController.text,
-          "quantity": int.tryParse(_quantityController.text) ?? 0,
-          "recipient_name": _recipientController.text,
-          "receipt_date": _dateController.text,
-          "remarks": _remarksController.text,
-        }),
       );
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('บันทึกข้อมูลสำเร็จ!')),
-        );
+        final data = jsonDecode(response.body);
+        setState(() {
+          _productData = data['product'];
+          _quantityController.text = _productData?['quantity'].toString() ?? '';
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาด: ${response.body}')),
+          SnackBar(content: Text('ไม่พบสินค้า: ${response.body}')),
         );
       }
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ไม่สามารถเชื่อมต่อ API ได้: $error')),
+        SnackBar(content: Text('เกิดข้อผิดพลาด: $error')),
       );
+    }
+  }
+
+  // Scan Barcode
+  Future<void> scanBarcode() async {
+    if (await Permission.camera.request().isGranted) {
+      try {
+        var result = await BarcodeScanner.scan();
+        if (result.rawContent.isNotEmpty) {
+          final barcode = result.rawContent;
+
+          // ตรวจสอบว่า barcode ไม่ว่างเปล่า
+          if (barcode.isNotEmpty) {
+            final response = await http.get(
+              Uri.parse(
+                  'http://your-server-ip:7070/products/search?barcode=$barcode'),
+            );
+
+            if (response.statusCode == 200) {
+              final data = jsonDecode(response.body);
+              setState(() {
+                _productData = data['product'];
+                _quantityController.text =
+                    _productData?['quantity'].toString() ?? '';
+              });
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('ไม่พบสินค้า: ${response.body}')),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('ไม่พบข้อมูลบาร์โค้ด')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('การสแกนบาร์โค้ดล้มเหลว')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error scanning barcode: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ต้องการสิทธิ์การใช้งานกล้อง')),
+      );
+    }
+  }
+
+  // Update Quantity
+  Future<void> _updateQuantity() async {
+    if (_productData != null) {
+      try {
+        final response = await http.put(
+          Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/products/update'),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({
+            "barcode": _productData!['barcode'],
+            "quantity": int.tryParse(_quantityController.text) ?? 0,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('อัปเดตจำนวนสำเร็จ')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เกิดข้อผิดพลาด: ${response.body}')),
+          );
+        }
+      } catch (error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถอัปเดตข้อมูลได้: $error')),
+        );
+      }
     }
   }
 
@@ -74,27 +152,24 @@ class _OutfoproductState extends State<Outfoproduct> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSearchField(),
+              if (_productData != null)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('ชื่อสินค้า: ${_productData!['product_name']}'),
+                      Text('หมวดหมู่: ${_productData!['category']}'),
+                      Text('จำนวนคงเหลือ: ${_productData!['quantity']}'),
+                    ],
+                  ),
+                ),
               SizedBox(height: 20),
               _buildTextField(
                 labelText: 'จำนวนที่เบิก',
                 hintText: 'กรอกจำนวน',
                 keyboardType: TextInputType.number,
                 controller: _quantityController,
-              ),
-              SizedBox(height: 20),
-              _buildTextField(
-                labelText: 'ผู้รับสินค้า',
-                hintText: 'กรอกชื่อผู้รับสินค้า',
-                controller: _recipientController,
-              ),
-              SizedBox(height: 20),
-              _buildDateField(context),
-              SizedBox(height: 20),
-              _buildTextField(
-                labelText: 'หมายเหตุ',
-                hintText: 'กรอกหมายเหตุเพิ่มเติม (ถ้ามี)',
-                controller: _remarksController,
-                maxLines: 3,
               ),
               SizedBox(height: 20),
               _buildActionButtons(),
@@ -122,33 +197,15 @@ class _OutfoproductState extends State<Outfoproduct> {
         ),
         SizedBox(width: 10),
         IconButton(
+          icon: Icon(Icons.search),
+          onPressed: _searchAndLoadProduct,
+        ),
+        IconButton(
           icon: Icon(Icons.qr_code_scanner),
           onPressed: scanBarcode,
         ),
       ],
     );
-  }
-
-  Future<void> scanBarcode() async {
-    if (await Permission.camera.request().isGranted) {
-      try {
-        var result = await BarcodeScanner.scan();
-        if (result.rawContent.isNotEmpty) {
-          setState(() {
-            _searchController.text = result.rawContent;
-          });
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error scanning barcode: $e')),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Camera permission is required to scan barcode')),
-      );
-    }
   }
 
   Widget _buildTextField({
@@ -172,97 +229,43 @@ class _OutfoproductState extends State<Outfoproduct> {
     );
   }
 
-  Widget _buildDateField(BuildContext context) {
-    return TextField(
-      controller: _dateController,
-      readOnly: true,
-      decoration: InputDecoration(
-        labelText: 'วันที่เบิก',
-        hintText: 'เลือกวันที่',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        suffixIcon: Icon(Icons.calendar_today),
-      ),
-      onTap: () async {
-        DateTime? pickedDate = await showDatePicker(
-          context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-        );
-        if (pickedDate != null) {
-          setState(() {
-            _dateController.text =
-                "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-          });
-        }
-      },
-    );
-  }
-
   Widget _buildActionButtons() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         ElevatedButton(
-          onPressed: _onSubmit,
+          onPressed: _updateQuantity,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            elevation: 8,
           ),
           child: Text(
-            'บันทึก',
+            'อัปเดตจำนวน',
             style: TextStyle(
                 fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
         TextButton(
-          onPressed: _onCancel,
+          onPressed: () {
+            Navigator.pop(context);
+          },
           style: TextButton.styleFrom(
             backgroundColor: Colors.red,
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            textStyle: TextStyle(fontSize: 16),
           ),
-          child: Text('ยกเลิก',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
+          child: Text(
+            'ยกเลิก',
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
         ),
       ],
     );
-  }
-
-  void _onSubmit() {
-    if (_quantityController.text.isEmpty ||
-        _recipientController.text.isEmpty ||
-        _dateController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วน')),
-      );
-      return;
-    }
-
-    final quantity = int.tryParse(_quantityController.text);
-    if (quantity == null || quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('กรุณากรอกจำนวนที่เบิกให้ถูกต้อง')),
-      );
-      return;
-    }
-
-    _submitDataToAPI();
-  }
-
-  void _onCancel() {
-    Navigator.pop(context);
   }
 }
