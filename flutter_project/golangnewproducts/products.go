@@ -5,17 +5,32 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
+func New(c *gin.Context) {
+	getDBConnection()
+	Product(c)
+	
+}
+
 // Database connection helper function
 func getDBConnection() (*sql.DB, error) {
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
+	// เพิ่ม Timeout การเชื่อมต่อที่ 30 วินาที
+	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s")
 	if err != nil {
 		return nil, err
 	}
+
+	// ปรับการตั้งค่า connection pool
+	db.SetMaxOpenConns(10)                  // กำหนดจำนวนการเชื่อมต่อสูงสุด
+	db.SetMaxIdleConns(5)                   // กำหนดจำนวนการเชื่อมต่อที่ไม่ได้ใช้งาน
+	db.SetConnMaxLifetime(30 * time.Minute) // กำหนดเวลาชีวิตสูงสุดของการเชื่อมต่อ
+
+	// ตรวจสอบการเชื่อมต่อ
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
@@ -91,140 +106,3 @@ func Product(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
 }
 
-// API ค้นหาสินค้าด้วย Barcode
-func SearchProduct(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
-	barcode := c.Query("barcode")
-	if barcode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "กรุณาระบุ Barcode"})
-		return
-	}
-
-	sqlQuery := `
-		SELECT product_number, product_name, category, quantity, stock_status 
-		FROM products 
-		WHERE barcode = ?`
-	var product struct {
-		ProductNumber string `json:"product_number"`
-		ProductName   string `json:"product_name"`
-		Category      string `json:"category"`
-		Quantity      int    `json:"quantity"`
-		StockStatus   string `json:"stock_status"`
-	}
-
-	err = db.QueryRow(sqlQuery, barcode).Scan(
-		&product.ProductNumber,
-		&product.ProductName,
-		&product.Category,
-		&product.Quantity,
-		&product.StockStatus,
-	)
-
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, gin.H{"message": "ไม่พบสินค้า"})
-		return
-	} else if err != nil {
-		log.Printf("Error retrieving product: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลสินค้าได้"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"product": product})
-}
-
-// API อัปเดต Quantity
-func UpdateQuantity(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
-	var request struct {
-		Barcode  string `json:"barcode" binding:"required"`
-		Quantity int    `json:"quantity" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ครบถ้วน"})
-		return
-	}
-
-	// อัปเดตจำนวนสินค้า
-	query := `UPDATE products SET quantity = ? WHERE barcode = ?`
-	result, err := db.Exec(query, request.Quantity, request.Barcode)
-	if err != nil {
-		log.Printf("Error updating quantity: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตข้อมูลได้"})
-		return
-	}
-
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบสินค้า"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "อัปเดตข้อมูลสำเร็จ"})
-}
-
-// API ดึงรายการสินค้าทั้งหมด
-func GetProducts(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
-	rows, err := db.Query("SELECT product_number, product_name, category, quantity, barcode, stock_status FROM products")
-	if err != nil {
-		log.Printf("Error querying products: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลสินค้าได้"})
-		return
-	}
-	defer rows.Close()
-
-	var products []map[string]interface{}
-	for rows.Next() {
-		var product struct {
-			ProductNumber string `json:"product_number"`
-			ProductName   string `json:"product_name"`
-			Category      string `json:"category"`
-			Quantity      int    `json:"quantity"`
-			Barcode       string `json:"barcode"`
-			StockStatus   string `json:"stock_status"`
-		}
-		if err := rows.Scan(
-			&product.ProductNumber,
-			&product.ProductName,
-			&product.Category,
-			&product.Quantity,
-			&product.Barcode,
-			&product.StockStatus,
-		); err != nil {
-			log.Printf("Error scanning product: %v", err)
-			continue
-		}
-		products = append(products, map[string]interface{}{
-			"product_number": product.ProductNumber,
-			"product_name":   product.ProductName,
-			"category":       product.Category,
-			"quantity":       product.Quantity,
-			"barcode":        product.Barcode,
-			"stock_status":   product.StockStatus,
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"products": products})
-}

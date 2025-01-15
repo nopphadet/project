@@ -51,8 +51,8 @@ class _AddProductPageState extends State<AddProductPage> {
         }
 
         // สร้างคำขอแบบ multipart
-        var uri =
-            Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/products');
+        var uri = Uri.parse(
+            'https://hfm99nd8-7070.asse.devtunnels.ms/products'); // ใช้ URL API ที่แท้จริง
         var request = http.MultipartRequest('POST', uri)
           ..fields['product_number'] = productNumber
           ..fields['product_name'] = productName
@@ -61,13 +61,27 @@ class _AddProductPageState extends State<AddProductPage> {
           ..fields['barcode'] = barcode
           ..fields['stock_status'] = stockStatus;
 
+        // พิมพ์ข้อมูลที่ส่งไป
+        print('Sending request with data:');
+        print('Product Number: $productNumber');
+        print('Product Name: $productName');
+        print('Category: $category');
+        print('Quantity: $quantity');
+        print('Barcode: $barcode');
+        print('Stock Status: $stockStatus');
+
         if (_image != null) {
           var imageFile =
               await http.MultipartFile.fromPath('image', _image!.path);
           request.files.add(imageFile);
+          print('Image Path: ${_image!.path}');
         }
 
         var response = await request.send().timeout(Duration(seconds: 10));
+
+        // แสดงผลการตอบกลับจาก API
+        String responseBody = await response.stream.bytesToString();
+        print('Response Body: $responseBody'); // พิมพ์ข้อความตอบกลับจาก API
 
         if (response.statusCode == 200) {
           _clearForm();
@@ -86,7 +100,7 @@ class _AddProductPageState extends State<AddProductPage> {
             ),
           );
         } else {
-          String responseBody = await response.stream.bytesToString();
+          // หาก statusCode ไม่ใช่ 200
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('เพิ่มสินค้าล้มเหลว: $responseBody')),
           );

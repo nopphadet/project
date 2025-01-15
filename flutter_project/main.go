@@ -3,10 +3,12 @@ package main
 import (
 	"database/sql"
 	"log"
+	products "newmos/newmos_api/golangnewproducts"
 
 	// "net/http"
-
-	// register "newmos/newmos_api/golangregister"
+	login "newmos/newmos_api/golanglogin"
+	register "newmos/newmos_api/golangregister"
+	update "newmos/newmos_api/golangupdateProduct"
 
 	// "regexp"
 
@@ -20,18 +22,17 @@ import (
 
 func Init() {
 	r := gin.Default()
-	r.POST("/register")
-	r.POST("/login")
-	r.POST("/products")
-	r.GET("/products/search")
+	r.POST("/register", register.Register)
+	r.POST("/login", login.Login)
+	r.POST("/products", products.New)
+	r.POST("/update", update.Update)
 
 	r.Run(":7070")
 }
 
 func main() {
-	//products.Product()
+
 	Init()
-	// register.Register()
 
 	// เชื่อมต่อกับฐานข้อมูล MySQL
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
