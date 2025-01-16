@@ -34,19 +34,15 @@ func Init() {
 func main() {
 
 	Init()
-
-	// เชื่อมต่อกับฐานข้อมูล MySQL
+	
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
 	if err != nil {
 		log.Fatalf("ไม่สามารถเชื่อมต่อฐานข้อมูล: %v", err)
 	}
 	defer db.Close()
-
 	if err := db.Ping(); err != nil {
 		log.Fatalf("การเชื่อมต่อฐานข้อมูลล้มเหลว: %v", err)
 	}
-
 	r := gin.Default()
-
 	r.Run(":7070")
 }

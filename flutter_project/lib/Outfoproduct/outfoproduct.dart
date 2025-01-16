@@ -15,7 +15,7 @@ class _ManageProductPageState extends State<ManageProductPage> {
 
   String _productName = '';
   int _quantity = 0;
-  String _productId = '';
+  // String _productId = '';
   bool _isLoading = false;
 
   final String baseURL = 'https://hfm99nd8-7070.asse.devtunnels.ms';
@@ -60,7 +60,7 @@ class _ManageProductPageState extends State<ManageProductPage> {
           setState(() {
             _productName = data['product']['product_name'] ?? 'ไม่ระบุชื่อ';
             _quantity = data['product']['quantity'] ?? 0;
-            _productId = data['product']['product_number'] ?? '';
+            // _productId = data['product']['product_number'] ?? '';
           });
         } else {
           _showSnackBar('ไม่พบข้อมูลสินค้า');
@@ -93,7 +93,7 @@ class _ManageProductPageState extends State<ManageProductPage> {
     });
 
     try {
-      // สร้าง body ของคำขอ
+      //  body ของคำขอ
       final Map<String, dynamic> requestBody = {
         'barcode': _barcodeController.text.trim(),
         'quantity': newQuantity,
@@ -109,21 +109,17 @@ class _ManageProductPageState extends State<ManageProductPage> {
         body: json.encode(requestBody),
       );
 
-      
       // print('Response status: ${response.statusCode}');
       // print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-       
         var data = json.decode(response.body);
         setState(() => _quantity = data['product']['quantity'] ?? newQuantity);
         _showSnackBar('อัปเดตจำนวนสินค้าเรียบร้อย');
       } else {
-
         _showSnackBar('ไม่สามารถอัปเดตข้อมูลสินค้าได้: ${response.body}');
       }
     } catch (e) {
-      
       _showSnackBar('เกิดข้อผิดพลาด: $e');
     } finally {
       // ปิดข้อความโหลด

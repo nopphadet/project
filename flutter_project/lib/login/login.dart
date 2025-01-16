@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_project/AddProductPage/AddProduct.dart';
 import 'package:flutter_project/ForgotPassword/ForgotPassword.dart';
+import 'package:flutter_project/HomePage/homePage.dart';
 import 'package:flutter_project/register/register.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -42,7 +42,7 @@ class Login extends StatelessWidget {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => AddProductPage()),
+          MaterialPageRoute(builder: (context) => LoginPage()),
         );
       } else {
         final error = jsonDecode(response.body);

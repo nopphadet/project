@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_project/Outfoproduct/outfoproduct.dart';
+import 'package:flutter_project/login/login.dart';
 
-void main() => runApp(App06DismissibleListView());
+void main() {
+  runApp(const MyApp());
+}
 
-class App06DismissibleListView extends StatelessWidget {
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.light(useMaterial3: false),
-      home: ManageProductPage(),
+      debugShowCheckedModeBanner: false,
+      home: Login(),
     );
   }
 }
