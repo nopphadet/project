@@ -18,13 +18,15 @@ class _ManageProductPageState extends State<ManageProductPage> {
   String _productId = '';
   bool _isLoading = false;
 
+  final String baseURL = 'https://hfm99nd8-7070.asse.devtunnels.ms';
+
   // แสดง SnackBar
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // ฟังก์ชันสแกนบาร์โค้ด
+  // ฟังก์ชันกล้องสแกนบาร์โค้ด
   Future<void> _scanBarcode() async {
     if (await Permission.camera.request().isGranted) {
       try {
@@ -43,32 +45,25 @@ class _ManageProductPageState extends State<ManageProductPage> {
     }
   }
 
-  // ดึงข้อมูลสินค้า
+  // ดึงข้อมูลสินค้าเพื่อแก้ไข
   Future<void> _fetchProductData(String barcode) async {
     setState(() => _isLoading = true);
 
     try {
       var response = await http.get(
-        Uri.parse(
-            'https://hfm99nd8-7070.asse.devtunnels.ms/update?barcode=$barcode'),
+        Uri.parse('$baseURL/products?barcode=$barcode'),
       );
 
-      // ตรวจสอบ Response Status
       if (response.statusCode == 200) {
-        if (response.headers['content-type']?.contains('application/json') ??
-            false) {
-          var data = json.decode(response.body);
-          if (data['product'] != null) {
-            setState(() {
-              _productName = data['product']['product_name'] ?? 'ไม่ระบุชื่อ';
-              _quantity = data['product']['quantity'] ?? 0;
-              _productId = data['product']['product_number'] ?? '';
-            });
-          } else {
-            _showSnackBar('ไม่พบข้อมูลสินค้า');
-          }
+        var data = json.decode(response.body);
+        if (data['product'] != null) {
+          setState(() {
+            _productName = data['product']['product_name'] ?? 'ไม่ระบุชื่อ';
+            _quantity = data['product']['quantity'] ?? 0;
+            _productId = data['product']['product_number'] ?? '';
+          });
         } else {
-          _showSnackBar('เนื้อหาของการตอบกลับไม่ใช่ JSON: ${response.body}');
+          _showSnackBar('ไม่พบข้อมูลสินค้า');
         }
       } else {
         _showSnackBar('ข้อผิดพลาดจากเซิร์ฟเวอร์: ${response.statusCode}');
@@ -80,10 +75,11 @@ class _ManageProductPageState extends State<ManageProductPage> {
     }
   }
 
-  // อัปเดตจำนวนสินค้า
+// อัปเดตแก้ไขจำนวนสินค้า
   Future<void> _updateProduct() async {
     String quantityText = _quantityController.text.trim();
 
+    // ตรวจสอบว่าข้อมูลที่กรอกถูกต้องหรือไม่
     if (quantityText.isEmpty || int.tryParse(quantityText) == null) {
       _showSnackBar('กรุณากรอกจำนวนสินค้าให้ถูกต้อง');
       return;
@@ -91,24 +87,49 @@ class _ManageProductPageState extends State<ManageProductPage> {
 
     int newQuantity = int.parse(quantityText);
 
+    // แสดงข้อความโหลด
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
+      // สร้าง body ของคำขอ
+      final Map<String, dynamic> requestBody = {
+        'barcode': _barcodeController.text.trim(),
+        'quantity': newQuantity,
+      };
+
+      // พิมพ์ body ที่กำลังจะส่งไปยัง API (สำหรับ debug)
+      print('Request Body: ${json.encode(requestBody)}');
+
+      // ส่งคำขอ PUT
       var response = await http.put(
-        Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/update'),
+        Uri.parse('$baseURL/products/update'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'barcode': _barcodeController.text,
-          'quantity': newQuantity,
-        }),
+        body: json.encode(requestBody),
       );
 
+      
+      // print('Response status: ${response.statusCode}');
+      // print('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        setState(() => _quantity = newQuantity);
+       
+        var data = json.decode(response.body);
+        setState(() => _quantity = data['product']['quantity'] ?? newQuantity);
         _showSnackBar('อัปเดตจำนวนสินค้าเรียบร้อย');
       } else {
+
         _showSnackBar('ไม่สามารถอัปเดตข้อมูลสินค้าได้: ${response.body}');
       }
     } catch (e) {
+      
       _showSnackBar('เกิดข้อผิดพลาด: $e');
+    } finally {
+      // ปิดข้อความโหลด
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -121,40 +142,48 @@ class _ManageProductPageState extends State<ManageProductPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(
-              controller: _barcodeController,
-              decoration: InputDecoration(
-                labelText: 'หมายเลขบาร์โค้ดสินค้า',
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.qr_code_scanner),
-                  onPressed: _scanBarcode,
-                ),
-              ),
-              readOnly: true,
-            ),
+            _buildBarcodeField(),
             SizedBox(height: 16),
-            if (_isLoading) CircularProgressIndicator(),
-            if (!_isLoading && _productName.isNotEmpty) ...[
-              Text('ชื่อสินค้า: $_productName', style: TextStyle(fontSize: 18)),
-              SizedBox(height: 8),
-              Text('จำนวนสินค้า: $_quantity', style: TextStyle(fontSize: 18)),
-              SizedBox(height: 16),
-              TextField(
-                controller: _quantityController,
-                decoration:
-                    InputDecoration(labelText: 'จำนวนสินค้าที่ต้องการแก้ไข'),
-                keyboardType: TextInputType.number,
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _updateProduct,
-                child: Text('อัปเดตจำนวนสินค้า'),
-              ),
-            ],
+            if (_isLoading) Center(child: CircularProgressIndicator()),
+            if (!_isLoading && _productName.isNotEmpty)
+              ..._buildProductDetails(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildBarcodeField() {
+    return TextFormField(
+      controller: _barcodeController,
+      decoration: InputDecoration(
+        labelText: 'หมายเลขบาร์โค้ดสินค้า',
+        border: OutlineInputBorder(),
+        suffixIcon: IconButton(
+          icon: Icon(Icons.qr_code_scanner),
+          onPressed: _scanBarcode,
+        ),
+      ),
+      readOnly: true,
+    );
+  }
+
+  List<Widget> _buildProductDetails() {
+    return [
+      Text('ชื่อสินค้า: $_productName', style: TextStyle(fontSize: 18)),
+      SizedBox(height: 8),
+      Text('จำนวนสินค้า: $_quantity', style: TextStyle(fontSize: 18)),
+      SizedBox(height: 16),
+      TextField(
+        controller: _quantityController,
+        decoration: InputDecoration(labelText: 'จำนวนสินค้าที่ต้องการแก้ไข'),
+        keyboardType: TextInputType.number,
+      ),
+      SizedBox(height: 16),
+      ElevatedButton(
+        onPressed: _updateProduct,
+        child: Text('อัปเดตจำนวนสินค้า'),
+      ),
+    ];
   }
 }

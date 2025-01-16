@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_project/Outfoproduct/outfoproduct.dart';
 
-
-
-
 void main() => runApp(App06DismissibleListView());
 
 class App06DismissibleListView extends StatelessWidget {
