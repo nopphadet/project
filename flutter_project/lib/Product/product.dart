@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_project/HomePage/homePage.dart';
 
 class Product {
   final String name;
@@ -42,23 +41,12 @@ List<Product> getProductsFromDatabase() {
 class ProductListPage extends StatelessWidget {
   final List<Product> products;
 
-  ProductListPage({Key? key})
-      : products = getProductsFromDatabase(),
-        super(key: key);
+  ProductListPage({super.key}) : products = getProductsFromDatabase();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back), // เพิ่มปุ่มกลับ
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => LoginPage()),
-            ); // กลับไปหน้าก่อนหน้า
-          },
-        ),
         title: const Text('รายการสินค้า'),
         backgroundColor: Colors.red,
         actions: [

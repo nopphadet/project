@@ -116,7 +116,6 @@ type Product1 struct {
 
 // var db *sql.DB
 
-
 // UpdateProduct handles updating product quantity
 func UpdateProduct(c *gin.Context) {
 	var requestData struct {
@@ -207,5 +206,72 @@ func GetProduct(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"product": product,
+	})
+}
+
+// API แก้ไขข้อมูลสินค้า
+func UpdateProductHandler(c *gin.Context) {
+	type Product struct {
+		ProductNumber string `json:"product_number" binding:"required"`
+		ProductName   string `json:"product_name" binding:"required"`
+		Category      string `json:"category" binding:"required"`
+		Quantity      int    `json:"quantity" binding:"required"`
+		StockStatus   string `json:"stock_status" binding:"required"`
+		ImagePath     string `json:"image_path"`
+	}
+
+	var product Product
+	if err := c.ShouldBindJSON(&product); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	db, err := getDBConnection()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
+		return
+	}
+	defer db.Close()
+
+	updateQuery := `
+        UPDATE products
+        SET product_name = ?, category = ?, quantity = ?, stock_status = ?, image_path = ?
+        WHERE product_number = ?`
+
+	log.Printf("Executing Update Query: %s", updateQuery)
+	result, err := db.Exec(updateQuery, product.ProductName, product.Category, product.Quantity, product.StockStatus, product.ImagePath, product.ProductNumber)
+	if err != nil {
+		log.Printf("Error executing update query: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("Rows affected: %d", rowsAffected)
+
+	selectQuery := `
+        SELECT product_number, product_name, category, quantity, stock_status, image_path
+        FROM products
+        WHERE product_number = ?`
+	var updatedProduct Product
+	err = db.QueryRow(selectQuery, product.ProductNumber).Scan(
+		&updatedProduct.ProductNumber,
+		&updatedProduct.ProductName,
+		&updatedProduct.Category,
+		&updatedProduct.Quantity,
+		&updatedProduct.StockStatus,
+		&updatedProduct.ImagePath,
+	)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated product"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Product updated successfully",
+		"product": updatedProduct,
 	})
 }

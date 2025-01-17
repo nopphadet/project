@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class HistoryPage extends StatefulWidget {
   @override
@@ -6,19 +8,43 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  List<Transaction> transactionHistory = getTransactionHistory();
+  List<Transaction> transactionHistory = [];
   List<Transaction> filteredHistory = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    filteredHistory = transactionHistory;
+    fetchTransactionHistory();
+  }
+
+  Future<void> fetchTransactionHistory() async {
+    try {
+      final response = await http.put(Uri.parse(
+          'https://hfm99nd8-7070.asse.devtunnels.ms/products/update-handler'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          transactionHistory =
+              data.map((e) => Transaction.fromJson(e)).toList();
+          filteredHistory = transactionHistory;
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load transactions');
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error: $e');
+    }
   }
 
   void _filterTransactions(String query) {
     setState(() {
       filteredHistory = transactionHistory.where((transaction) {
-        return transaction.product.name.contains(query) ||
+        return transaction.productName.contains(query) ||
             transaction.date.contains(query);
       }).toList();
     });
@@ -31,28 +57,31 @@ class _HistoryPageState extends State<HistoryPage> {
         title: const Text('ประวัติการนำเข้า-นำออก'),
         backgroundColor: Colors.red,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          children: [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'ค้นหา',
-                prefixIcon: Icon(Icons.search),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: 'ค้นหา',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: _filterTransactions,
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredHistory.length,
+                      itemBuilder: (context, index) {
+                        return _buildTransactionCard(
+                            context, filteredHistory[index]);
+                      },
+                    ),
+                  ),
+                ],
               ),
-              onChanged: _filterTransactions,
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredHistory.length,
-                itemBuilder: (context, index) {
-                  return _buildTransactionCard(context, filteredHistory[index]);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -61,14 +90,14 @@ class _HistoryPageState extends State<HistoryPage> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Icon(
-          transaction.type == TransactionType.incoming
+          transaction.type == 'incoming'
               ? Icons.add_box
               : Icons.remove_circle_outline,
           color: Colors.red,
         ),
-        title: Text(transaction.product.name),
+        title: Text(transaction.productName),
         subtitle: Text(
-            '${transaction.type == TransactionType.incoming ? 'นำเข้า' : 'นำออก'} - จำนวน: ${transaction.quantity} ชิ้น'),
+            '${transaction.type == 'incoming' ? 'นำเข้า' : 'นำออก'} - จำนวน: ${transaction.quantity} ชิ้น'),
         trailing: Text(
           transaction.date,
           style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -79,56 +108,24 @@ class _HistoryPageState extends State<HistoryPage> {
 }
 
 class Transaction {
-  final Product product;
+  final String productName;
   final int quantity;
-  final TransactionType type;
+  final String type;
   final String date;
 
   Transaction({
-    required this.product,
+    required this.productName,
     required this.quantity,
     required this.type,
     required this.date,
   });
-}
 
-enum TransactionType {
-  incoming,
-  outgoing,
-}
-
-class Product {
-  final String name;
-
-  Product({required this.name});
-}
-
-List<Transaction> getTransactionHistory() {
-  // รายการการนำเข้า-นำออกสินค้าสำหรับการทดสอบ
-  return [
-    Transaction(
-      product: Product(name: 'สินค้า A'),
-      quantity: 50,
-      type: TransactionType.outgoing,
-      date: '2024-12-01',
-    ),
-    Transaction(
-      product: Product(name: 'สินค้า B'),
-      quantity: 20,
-      type: TransactionType.outgoing,
-      date: '2024-12-02',
-    ),
-    Transaction(
-      product: Product(name: 'สินค้า C'),
-      quantity: 100,
-      type: TransactionType.incoming,
-      date: '2024-12-05',
-    ),
-    Transaction(
-      product: Product(name: 'สินค้า A'),
-      quantity: 30,
-      type: TransactionType.outgoing,
-      date: '2024-12-10',
-    ),
-  ];
+  factory Transaction.fromJson(Map<String, dynamic> json) {
+    return Transaction(
+      productName: json['product_name'],
+      quantity: json['quantity'],
+      type: json['type'],
+      date: json['date'],
+    );
+  }
 }
