@@ -97,6 +97,7 @@ func Product(c *gin.Context) {
 	query := `
 		INSERT INTO products (product_number, product_name, category, quantity, barcode, stock_status, image_path, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+
 	_, err = db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, imagePath)
 	if err != nil {
 		log.Printf("Error inserting product: %v", err)
@@ -104,17 +105,25 @@ func Product(c *gin.Context) {
 		return
 	}
 
+	// เก็บประวัติการเพิ่มสินค้า
+	changeQuery := `
+		INSERT INTO product_changes (product_id, change_type, new_quantity, changed_by)
+		VALUES (LAST_INSERT_ID(), 'ADD', ?, ?)`
+	_, err = db.Exec(changeQuery, product.Quantity, "admin") // เปลี่ยน "admin" เป็นชื่อผู้ที่ทำการเพิ่ม
+	if err != nil {
+		log.Printf("Error logging product change: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถบันทึกการเปลี่ยนแปลง"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
 }
 
-// Product represents the product structure
 type Product1 struct {
 	ProductNumber string `json:"product_number"`
 	ProductName   string `json:"product_name"`
 	Quantity      int    `json:"quantity"`
 }
-
-// var db *sql.DB
 
 // UpdateProduct handles updating product quantity
 func UpdateProduct(c *gin.Context) {
@@ -159,6 +168,18 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
+	// บันทึกการเปลี่ยนแปลงลงในตาราง product_changes
+	_, err = db.Exec(`
+		INSERT INTO product_changes (product_number, change_type, old_quantity, new_quantity, changed_by, created_at)
+		VALUES (?, 'UPDATE', ?, ?, ?, CURRENT_TIMESTAMP)`,
+		product.ProductNumber, product.Quantity, requestData.Quantity, "admin") // ใช้ "admin" แทนชื่อผู้ที่ทำการอัปเดตหรือดึงจาก JWT หรือการล็อกอิน
+
+	if err != nil {
+		log.Printf("Error logging product change: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error logging product change"})
+		return
+	}
+
 	// อัปเดตจำนวนสินค้าในฐานข้อมูล
 	_, err = db.Exec("UPDATE products SET quantity = ? WHERE barcode = ?", requestData.Quantity, requestData.Barcode)
 	if err != nil {
@@ -179,6 +200,11 @@ func UpdateProduct(c *gin.Context) {
 
 // GetProduct handles fetching product details by barcode
 func GetProduct(c *gin.Context) {
+	type Product1 struct {
+		ProductNumber string `json:"product_number"`
+		ProductName   string `json:"product_name"`
+		Quantity      int    `json:"quantity"`
+	}
 	barcode := c.Query("barcode")
 
 	if barcode == "" {
@@ -209,69 +235,81 @@ func GetProduct(c *gin.Context) {
 	})
 }
 
-// API แก้ไขข้อมูลสินค้า
-func UpdateProductHandler(c *gin.Context) {
-	type Product struct {
-		ProductNumber string `json:"product_number" binding:"required"`
-		ProductName   string `json:"product_name" binding:"required"`
-		Category      string `json:"category" binding:"required"`
-		Quantity      int    `json:"quantity" binding:"required"`
-		StockStatus   string `json:"stock_status" binding:"required"`
-		ImagePath     string `json:"image_path"`
-	}
-
-	var product Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-		return
-	}
+// GetProductChangeHistory ดึงประวัติการเปลี่ยนแปลงสินค้าจากฐานข้อมูล
+func GetProductChangeHistory(c *gin.Context) {
 
 	db, err := getDBConnection()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
 		return
 	}
 	defer db.Close()
 
-	updateQuery := `
-        UPDATE products
-        SET product_name = ?, category = ?, quantity = ?, stock_status = ?, image_path = ?
-        WHERE product_number = ?`
-
-	log.Printf("Executing Update Query: %s", updateQuery)
-	result, err := db.Exec(updateQuery, product.ProductName, product.Category, product.Quantity, product.StockStatus, product.ImagePath, product.ProductNumber)
+	rows, err := db.Query(`
+		SELECT ProductName, product_number, change_type, old_quantity, new_quantity, changed_by, created_at 
+		FROM product_changes
+		ORDER BY created_at DESC`)
 	if err != nil {
-		log.Printf("Error executing update query: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลประวัติการเปลี่ยนแปลงได้"})
+		return
+	}
+	defer rows.Close()
+
+	var productChanges []map[string]interface{}
+
+	for rows.Next() {
+		var ProductName, productNumber, changeType, changedBy, createdAt sql.NullString
+		var oldQuantity, newQuantity sql.NullInt32
+
+		// ใช้ rows.Scan สำหรับจับคู่กับคอลัมน์จาก query result
+		err := rows.Scan(&ProductName, &productNumber, &changeType, &oldQuantity, &newQuantity, &changedBy, &createdAt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอ่านข้อมูลประวัติการเปลี่ยนแปลงได้"})
+			log.Printf("Error scanning row: %v", err) // log เพิ่มเติมเพื่อง่ายต่อการ debug
+			return
+		}
+
+		// สร้างแผนที่สำหรับข้อมูลในแถวปัจจุบันและจัดการค่า NULL
+		productChanges = append(productChanges, map[string]interface{}{
+			"ProductName":    getStringValue(ProductName),
+			"product_number": getStringValue(productNumber),
+			"change_type":    getStringValue(changeType),
+			"old_quantity":   getIntValue(oldQuantity),
+			"new_quantity":   getIntValue(newQuantity),
+			"changed_by":     getStringValue(changedBy),
+			"created_at":     getStringValue(createdAt),
+		})
+	}
+
+	// ตรวจสอบว่าผลลัพธ์ไม่มีปัญหาจากการอ่านข้อมูล
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในชุดผลลัพธ์ของการดึงข้อมูล"})
+		log.Printf("Error reading rows: %v", err) // log เพิ่มเติมเพื่อง่ายต่อการ debug
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	log.Printf("Rows affected: %d", rowsAffected)
-
-	selectQuery := `
-        SELECT product_number, product_name, category, quantity, stock_status, image_path
-        FROM products
-        WHERE product_number = ?`
-	var updatedProduct Product
-	err = db.QueryRow(selectQuery, product.ProductNumber).Scan(
-		&updatedProduct.ProductNumber,
-		&updatedProduct.ProductName,
-		&updatedProduct.Category,
-		&updatedProduct.Quantity,
-		&updatedProduct.StockStatus,
-		&updatedProduct.ImagePath,
-	)
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
-		return
-	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated product"})
+	// ตรวจสอบว่ามีข้อมูลในประวัติการเปลี่ยนแปลง
+	if len(productChanges) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "ไม่พบข้อมูลประวัติการเปลี่ยนแปลง"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Product updated successfully",
-		"product": updatedProduct,
-	})
+	// ส่งข้อมูลประวัติการเปลี่ยนแปลงกลับไปในรูปแบบ JSON
+	c.JSON(http.StatusOK, productChanges)
+}
+
+// ฟังก์ชันช่วยสำหรับจัดการ sql.NullString
+func getStringValue(input sql.NullString) string {
+	if input.Valid {
+		return input.String
+	}
+	return "" // คืนค่าเริ่มต้นเมื่อเป็น NULL
+}
+
+// ฟังก์ชันช่วยสำหรับจัดการ sql.NullInt32
+func getIntValue(input sql.NullInt32) int {
+	if input.Valid {
+		return int(input.Int32)
+	}
+	return 0 // คืนค่าเริ่มต้นเมื่อเป็น NULL
 }

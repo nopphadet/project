@@ -15,23 +15,30 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    fetchTransactionHistory();
+    fetchProductChangeHistory();
   }
 
-  Future<void> fetchTransactionHistory() async {
+  Future<void> fetchProductChangeHistory() async {
     try {
-      final response = await http.put(Uri.parse(
-          'https://hfm99nd8-7070.asse.devtunnels.ms/products/update-handler'));
+      final response = await http.get(
+        Uri.parse('https://hfm99nd8-7070.asse.devtunnels.ms/product-changes'),
+      );
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final List<dynamic> jsonData = json.decode(response.body);
+
         setState(() {
-          transactionHistory =
-              data.map((e) => Transaction.fromJson(e)).toList();
+          transactionHistory = jsonData
+              .map((e) => Transaction.fromJson(e))
+              .toList();
           filteredHistory = transactionHistory;
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to load transactions');
+        setState(() {
+          isLoading = false;
+        });
+        print('Error: Failed to fetch history with status code ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
@@ -44,8 +51,8 @@ class _HistoryPageState extends State<HistoryPage> {
   void _filterTransactions(String query) {
     setState(() {
       filteredHistory = transactionHistory.where((transaction) {
-        return transaction.productName.contains(query) ||
-            transaction.date.contains(query);
+        return transaction.productNumber.contains(query) ||
+            transaction.changeType.contains(query);
       }).toList();
     });
   }
@@ -54,52 +61,52 @@ class _HistoryPageState extends State<HistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ประวัติการนำเข้า-นำออก'),
+        title: const Text('ประวัติการเปลี่ยนแปลงสินค้า'),
         backgroundColor: Colors.red,
       ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                children: [
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText: 'ค้นหา',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                    onChanged: _filterTransactions,
+          : filteredHistory.isEmpty
+              ? Center(child: Text('ไม่มีประวัติการเปลี่ยนแปลง'))
+              : Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      TextField(
+                        decoration: InputDecoration(
+                          labelText: 'ค้นหาประวัติ',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                        onChanged: _filterTransactions,
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: filteredHistory.length,
+                          itemBuilder: (context, index) {
+                            return _buildHistoryCard(
+                                context, filteredHistory[index]);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: filteredHistory.length,
-                      itemBuilder: (context, index) {
-                        return _buildTransactionCard(
-                            context, filteredHistory[index]);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 
-  Widget _buildTransactionCard(BuildContext context, Transaction transaction) {
+  Widget _buildHistoryCard(BuildContext context, Transaction transaction) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Icon(
-          transaction.type == 'incoming'
-              ? Icons.add_box
-              : Icons.remove_circle_outline,
-          color: Colors.red,
+          Icons.history,
+          color: Colors.blue,
         ),
-        title: Text(transaction.productName),
+        title: Text('Product Number: ${transaction.productNumber}'),
         subtitle: Text(
-            '${transaction.type == 'incoming' ? 'นำเข้า' : 'นำออก'} - จำนวน: ${transaction.quantity} ชิ้น'),
+            '${transaction.changeType} - จาก ${transaction.oldQuantity} เป็น ${transaction.newQuantity} ชิ้น'),
         trailing: Text(
-          transaction.date,
+          transaction.createdAt,
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ),
@@ -108,24 +115,30 @@ class _HistoryPageState extends State<HistoryPage> {
 }
 
 class Transaction {
-  final String productName;
-  final int quantity;
-  final String type;
-  final String date;
+  final String productNumber;
+  final String changeType;
+  final int oldQuantity;
+  final int newQuantity;
+  final String changedBy;
+  final String createdAt;
 
   Transaction({
-    required this.productName,
-    required this.quantity,
-    required this.type,
-    required this.date,
+    required this.productNumber,
+    required this.changeType,
+    required this.oldQuantity,
+    required this.newQuantity,
+    required this.changedBy,
+    required this.createdAt,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
-      productName: json['product_name'],
-      quantity: json['quantity'],
-      type: json['type'],
-      date: json['date'],
+      productNumber: json['product_number'] ?? 'N/A',
+      changeType: json['change_type'] ?? 'unknown',
+      oldQuantity: json['old_quantity'] ?? 0,
+      newQuantity: json['new_quantity'] ?? 0,
+      changedBy: json['changed_by'] ?? 'N/A',
+      createdAt: json['created_at'] ?? '',
     );
   }
 }
