@@ -172,8 +172,8 @@ class ProductDetailPage extends StatelessWidget {
                               true
                       ? product.imageUrl
                       : 'https://via.placeholder.com/200',
-                  width: 200,
-                  height: 200,
+                  width: 500,
+                  height: 500,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Icon(Icons.broken_image,

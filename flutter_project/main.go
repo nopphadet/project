@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
-	showproducts "newmos/newmos_api/Listproduct"
+	showproducts "newmos/newmos_api/Golistproduct"
 	login "newmos/newmos_api/golanglogin"
 	products "newmos/newmos_api/golangnewproducts"
 	register "newmos/newmos_api/golangregister"
