@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	showproducts "newmos/newmos_api/Listproduct"
 	login "newmos/newmos_api/golanglogin"
 	products "newmos/newmos_api/golangnewproducts"
 	register "newmos/newmos_api/golangregister"
@@ -14,13 +15,14 @@ import (
 func Init() {
 	r := gin.Default()
 
-	// Routes
 	r.POST("/register", register.Register)
 	r.POST("/login", login.Login)
 	r.GET("/products", products.GetProduct)
 	r.POST("/products", products.Product)
 	r.PUT("/products/update", products.UpdateProduct)
 	r.GET("/product-changes", products.GetProductChangeHistory)
+	r.GET("/showproducts", showproducts.Showproducts)
+	r.Static("/uploads", "./uploads")
 
 	r.Run(":7070")
 }

@@ -1,11 +1,32 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-
-import 'package:barcode_scan2/barcode_scan2.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_project/AddProductPage/AddProduct.dart';
 import 'package:flutter_project/HistoryPage/historyPage.dart';
 import 'package:flutter_project/Outfoproduct/outfoproduct.dart';
 import 'package:flutter_project/Product/product.dart';
 import 'package:flutter_project/login/login.dart';
+
+// โมเดลสินค้า
+class Product {
+  final String productName;
+  final String imageUrl;
+  final int quantity;
+
+  Product({
+    required this.productName,
+    required this.imageUrl,
+    required this.quantity,
+  });
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      productName: json['product_name'],
+      imageUrl: json['image_url'],
+      quantity: json['quantity'],
+    );
+  }
+}
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,46 +36,61 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  List<Product> allProducts = [];
-  List<Product> filteredProducts = [];
+  late Future<List<Product>> productsFuture;
 
   @override
   void initState() {
     super.initState();
-    allProducts = getProductsFromDatabase();
-    filteredProducts = allProducts;
+    productsFuture = fetchProductsFromApi();
+  }
+
+  // ดึงข้อมูลสินค้าจาก API
+  Future<List<Product>> fetchProductsFromApi() async {
+    const String apiUrl =
+        "https://hfm99nd8-7070.asse.devtunnels.ms/showproducts";
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((item) => Product.fromJson(item)).toList();
+      } else {
+        throw Exception("ไม่สามารถดึงข้อมูลสินค้าได้");
+      }
+    } catch (e) {
+      throw Exception("เกิดข้อผิดพลาด: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    int availableStock = 100;
-    int damagedStock = 5;
+    int availableStock = 100; // ตัวอย่างข้อมูล
+    int damagedStock = 5; // ตัวอย่างข้อมูล
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('ระบบจัดการสินค้า'),
-        backgroundColor: Color.fromARGB(255, 255, 255, 255),
+        title: const Text('ระบบจัดการสินค้า'),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.logout),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => Login()),
               );
-              // Handle login button press
-              print('Login button pressed');
             },
           ),
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color.fromARGB(255, 229, 9, 20), // Red color on top
+              Color.fromARGB(255, 229, 9, 20), // Red color on top
               Color.fromARGB(255, 245, 245, 241), // White color on bottom
             ],
             begin: Alignment.topCenter,
@@ -89,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 8,
@@ -127,53 +163,51 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _buildSquareImageWithDescription(context,
-                      'assets/PNG/new-product.png', '', AddProductPage(),
-                      width: screenWidth * 0.3,
-                      height: screenHeight * 0.15,
-                      withBorder: true),
-                  const SizedBox(width: 20),
-                  _buildSquareImageWithDescription(context,
-                      'assets/PNG/new-product.png', '', AddProductPage(),
-                      width: screenWidth * 0.3,
-                      height: screenHeight * 0.15,
-                      withBorder: true),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _buildSquareImageWithDescription(context,
-                      'assets/PNG/new-product.png', '', ProductListPage(),
-                      width: screenWidth * 0.3,
-                      height: screenHeight * 0.15,
-                      withBorder: true),
-                  const SizedBox(width: 20),
-                  _buildSquareImageWithDescription(context,
-                      'assets/PNG/new-product.png', '', AddProductPage(),
-                      width: screenWidth * 0.3,
-                      height: screenHeight * 0.15,
-                      withBorder: true),
-                ],
+              FutureBuilder<List<Product>>(
+                future: productsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(
+                      child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'),
+                    );
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text('ไม่มีสินค้าล่าสุด'),
+                    );
+                  } else {
+                    final products = snapshot.data!
+                        .take(4) // ดึงรายการแค่ 4 รายการ
+                        .toList();
+
+                    return GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, // กำหนดให้มี 2 คอลัมน์ในแถว
+                        crossAxisSpacing: 20, // กำหนดระยะห่างระหว่างคอลัมน์
+                        mainAxisSpacing: 20, // กำหนดระยะห่างระหว่างแถว
+                      ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        return _buildSquareImageWithDescription(
+                          context,
+                          product.imageUrl,
+                          product.productName,
+                          AddProductPage(),
+                          width: screenWidth * 0.3,
+                          height: screenHeight * 0.15,
+                          withBorder: true,
+                        );
+                      },
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 15),
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          var result = await BarcodeScanner.scan();
-          if (result.type == ResultType.Barcode) {
-            // Handle the scanned barcode result here
-            print('Scanned barcode: ${result.rawContent}');
-          }
-        },
-        child: const Icon(Icons.qr_code, color: Colors.white),
-        backgroundColor: Color.fromARGB(255, 229, 9, 20),
       ),
     );
   }
@@ -192,16 +226,16 @@ class _LoginPageState extends State<LoginPage> {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [
-              const Color.fromARGB(255, 245, 245, 241),
+              Color.fromARGB(255, 245, 245, 241),
               Color.fromARGB(255, 245, 245, 241),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20.0),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black26,
               blurRadius: 12,
@@ -257,7 +291,7 @@ class _LoginPageState extends State<LoginPage> {
             height: 60,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
                   blurRadius: 8,
@@ -313,9 +347,11 @@ class _LoginPageState extends State<LoginPage> {
               child: SizedBox(
                 width: width,
                 height: height,
-                child: Image.asset(
+                child: Image.network(
                   imagePath,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.error),
                 ),
               ),
             ),
@@ -331,18 +367,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-}
-
-List<Product> getProductsFromDatabase() {
-  return [
-    Product(name: 'สินค้า A', stock: 50),
-    Product(name: 'สินค้า B', stock: 20),
-  ];
-}
-
-class Product {
-  final String name;
-  final int stock;
-
-  Product({required this.name, required this.stock});
 }

@@ -28,9 +28,8 @@ class _HistoryPageState extends State<HistoryPage> {
         final List<dynamic> jsonData = json.decode(response.body);
 
         setState(() {
-          transactionHistory = jsonData
-              .map((e) => Transaction.fromJson(e))
-              .toList();
+          transactionHistory =
+              jsonData.map((e) => Transaction.fromJson(e)).toList();
           filteredHistory = transactionHistory;
           isLoading = false;
         });
@@ -38,7 +37,8 @@ class _HistoryPageState extends State<HistoryPage> {
         setState(() {
           isLoading = false;
         });
-        print('Error: Failed to fetch history with status code ${response.statusCode}');
+        print(
+            'Error: Failed to fetch history with status code ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
@@ -115,6 +115,7 @@ class _HistoryPageState extends State<HistoryPage> {
 }
 
 class Transaction {
+  final String ProductName;
   final String productNumber;
   final String changeType;
   final int oldQuantity;
@@ -123,6 +124,7 @@ class Transaction {
   final String createdAt;
 
   Transaction({
+    required this.ProductName,
     required this.productNumber,
     required this.changeType,
     required this.oldQuantity,
@@ -133,6 +135,7 @@ class Transaction {
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
+      ProductName: json['product_name'] ?? 'N/A',
       productNumber: json['product_number'] ?? 'N/A',
       changeType: json['change_type'] ?? 'unknown',
       oldQuantity: json['old_quantity'] ?? 0,

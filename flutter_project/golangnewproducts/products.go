@@ -18,9 +18,8 @@ import (
 
 // }
 
-// Database connection helper function
 func getDBConnection() (*sql.DB, error) {
-	// เพิ่ม Timeout การเชื่อมต่อที่ 30 วินาที
+
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s")
 	if err != nil {
 		return nil, err
@@ -235,7 +234,7 @@ func GetProduct(c *gin.Context) {
 	})
 }
 
-// GetProductChangeHistory ดึงประวัติการเปลี่ยนแปลงสินค้าจากฐานข้อมูล
+//  ดึงประวัติการเปลี่ยนแปลงสินค้าจากฐานข้อมูล
 func GetProductChangeHistory(c *gin.Context) {
 
 	db, err := getDBConnection()

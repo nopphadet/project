@@ -4,11 +4,12 @@ import 'dart:convert';
 
 class Product {
   final String name;
-  final int stock;
+  int stock;
   final String imageUrl;
 
   Product({required this.name, required this.stock, required this.imageUrl});
 
+  // แปลง JSON จาก API เป็น Object Product
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       name: json['product_name'],
@@ -33,10 +34,12 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   Future<List<Product>> fetchProductsFromApi() async {
-    const apiUrl = 'https://hfm99nd8-7070.asse.devtunnels.ms/showproducts';
+    const apiUrl =
+        'https://hfm99nd8-7070.asse.devtunnels.ms/showproducts'; // URL ของ API
     try {
       final response = await http.get(Uri.parse(apiUrl));
       if (response.statusCode == 200) {
+        // แปลง JSON เป็น List<Product>
         final List<dynamic> jsonData = json.decode(response.body);
         return jsonData.map((json) => Product.fromJson(json)).toList();
       } else {
@@ -69,18 +72,7 @@ class _ProductListPageState extends State<ProductListPage> {
             return ListView.builder(
               itemCount: products.length,
               itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            ProductDetailPage(product: products[index]),
-                      ),
-                    );
-                  },
-                  child: _buildProductCard(context, products[index]),
-                );
+                return _buildProductCard(context, products[index]);
               },
             );
           } else {
@@ -108,7 +100,7 @@ class _ProductListPageState extends State<ProductListPage> {
                 product.imageUrl.isNotEmpty &&
                         Uri.tryParse(product.imageUrl)?.hasAbsolutePath == true
                     ? product.imageUrl
-                    : 'https://via.placeholder.com/80',
+                    : 'https://via.placeholder.com/80', 
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
@@ -128,69 +120,18 @@ class _ProductListPageState extends State<ProductListPage> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1, // จำกัดข้อความใน 1 บรรทัด
+                    overflow: TextOverflow.ellipsis, // ตัดข้อความถ้ายาวเกิน
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'สินค้าคงเหลือ: ${product.stock} ชิ้น',
                     style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ProductDetailPage extends StatelessWidget {
-  final Product product;
-
-  const ProductDetailPage({Key? key, required this.product}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(product.name),
-        backgroundColor: Colors.red,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  product.imageUrl.isNotEmpty &&
-                          Uri.tryParse(product.imageUrl)?.hasAbsolutePath ==
-                              true
-                      ? product.imageUrl
-                      : 'https://via.placeholder.com/200',
-                  width: 200,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(Icons.broken_image,
-                        size: 200, color: Colors.grey);
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'ชื่อสินค้า: ${product.name}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'สินค้าคงเหลือ: ${product.stock} ชิ้น',
-              style: const TextStyle(fontSize: 18),
             ),
           ],
         ),

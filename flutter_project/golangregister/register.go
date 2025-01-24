@@ -5,22 +5,8 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-
-	// "net/http"
-
-	// "regexp"
-
-	// "strconv" // Import strconv for converting string to int
-
-	// login "newmos/newmos_api/golanglogin"
-	// products "newmos/newmos_api/golangnewproducts"
-	// updateProduct "newmos/newmos_api/golangupdateProduct"
-
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-
-	// "golang.org/x/crypto/bcrypt"
-
 	_ "github.com/go-sql-driver/mysql"
 )
 
