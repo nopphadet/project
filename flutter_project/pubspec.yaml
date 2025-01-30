@@ -28,12 +28,12 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  permission_handler: ^11.3.1
   flutter:
     sdk: flutter
   http: ^0.13.3  # หรือเวอร์ชันที่ต่ำกว่า
   path_provider: ^2.0.11
   sqflite: ^2.0.0+3
- 
 
 
 
@@ -47,9 +47,9 @@ dependencies:
   url_launcher: ^6.1.7
   image_picker: ^1.1.2
   barcode_scan2: ^4.3.3
-  permission_handler: ^11.3.1
   connectivity_plus: ^6.1.1
   web_socket_channel: ^3.0.1
+  provider: ^6.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

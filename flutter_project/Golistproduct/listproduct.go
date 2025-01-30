@@ -42,7 +42,7 @@ type Product struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-// listproducts - ฟังก์ชันสำหรับดึงข้อมูลสินค้าทั้งหมด
+
 func Showproducts(c *gin.Context) {
 
 	db, err := getDBConnection()

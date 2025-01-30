@@ -5,11 +5,11 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
-	_ "github.com/go-sql-driver/mysql"
-)
 
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
+)
 
 func Register(c *gin.Context) {
 	type User struct {
@@ -31,8 +31,7 @@ func Register(c *gin.Context) {
 
 	var user User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
-		return
+
 	}
 
 	// ตรวจสอบอีเมลและเบอร์โทร

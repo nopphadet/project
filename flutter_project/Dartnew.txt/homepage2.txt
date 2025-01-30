@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_project/ProductProvider/ProductProvider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_project/AddProductPage/AddProduct.dart';
 import 'package:flutter_project/HistoryPage/historyPage.dart';
+import 'package:flutter_project/Outfoproduct/outfoproduct.dart';
 import 'package:flutter_project/Product/product.dart';
 import 'package:flutter_project/login/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 
 // โมเดลสินค้า
 class Product {
@@ -146,12 +147,6 @@ class _LoginPageState extends State<LoginPage> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              SharedPreferences.getInstance().then((prefs) {
-                prefs.remove(
-                    'token'); // ลบ token ออกจาก SharedPreferences โดยใช้ remove
-                prefs.remove(
-                    'role'); // ลบ role ออกจาก SharedPreferences โดยใช้ remove ออกจากระบบ
-              });
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => Login()),
@@ -238,7 +233,7 @@ class _LoginPageState extends State<LoginPage> {
                             context,
                             'assets/PNG/out-of-stock.png',
                             'จองสินค้า',
-                            ProductProvider(),
+                            ManageProductPage(),
                           ),
                         if (role == '1')
                           _buildCategoryButton(
@@ -312,6 +307,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+    
   }
 
   Widget _buildSquareBoxWithText(

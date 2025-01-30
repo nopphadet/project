@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_project/ForgotPassword/ForgotPassword.dart';
 import 'package:flutter_project/HomePage/homePage.dart';
-import 'package:flutter_project/register/register.dart';
+// import 'package:flutter_project/register/register.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatelessWidget {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final storage = FlutterSecureStorage(); // Secure storage for token
+  final storage = const FlutterSecureStorage(); // Secure storage for token
 
-  // ฟังก์ชันสำหรับล็อกอิน
+// ฟังก์ชันสำหรับล็อกอิน
   Future<void> login(BuildContext context) async {
     final String username = usernameController.text.trim();
     final String password = passwordController.text.trim();
@@ -35,6 +36,13 @@ class Login extends StatelessWidget {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         await storage.write(key: 'token', value: data['token']);
+        await storage.write(key: 'role', value: data['role']);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('token', data['token']);
+        prefs.setString('role', data['role']);
+
+        print("=====================================");
+        print(prefs.getString('token'));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
@@ -42,7 +50,10 @@ class Login extends StatelessWidget {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
+          MaterialPageRoute(
+              builder: (context) => const LoginPage(
+                    role: '',
+                  )),
         );
       } else {
         final error = jsonDecode(response.body);
@@ -57,8 +68,23 @@ class Login extends StatelessWidget {
     }
   }
 
+  checkLogin(context) {
+    SharedPreferences.getInstance().then((prefs) {
+      if (prefs.getString('token') != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const LoginPage(
+                    role: '',
+                  )),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    checkLogin(context);
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -172,30 +198,30 @@ class Login extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "ยังไม่มีบัญชีใช่ไหม",
-                        style: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => Register()),
-                          );
-                        },
-                        child: const Text(
-                          'ลงทะเบียน',
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 0, 0, 0),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.center,
+                  //   children: [
+                  //     const Text(
+                  //       "ยังไม่มีบัญชีใช่ไหม",
+                  //       style: TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
+                  //     ),
+                  //     TextButton(
+                  //       onPressed: () {
+                  //         Navigator.push(
+                  //           context,
+                  //           MaterialPageRoute(builder: (context) => Register()),
+                  //         );
+                  //       },
+                  //       child: const Text(
+                  //         'ลงทะเบียน',
+                  //         style: TextStyle(
+                  //           color: Color.fromARGB(255, 0, 0, 0),
+                  //           fontWeight: FontWeight.bold,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
                 ],
               ),
             ),

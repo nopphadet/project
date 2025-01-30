@@ -254,12 +254,12 @@ class _AddProductPageState extends State<AddProductPage> {
               SizedBox(height: 20),
               _buildTextFormField(
                 controller: _categoryController,
-                label: 'หมวดหมู่',
+                label: 'ประเภท',
                 icon: Icons.category,
                 keyboardType: TextInputType.text,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'โปรดใส่ชื่อหมวดหมู่';
+                    return 'โปรดใส่ชื่อประเภท';
                   }
                   return null;
                 },

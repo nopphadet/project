@@ -1,0 +1,69 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_project/ProductProvider/ProductProvider.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: ProductProvider(),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------
+import 'package:flutter/material.dart';
+import 'package:flutter_project/ProductProvider/ProductProvider.dart';
+import 'package:provider/provider.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class YourHomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home Page'),
+      ),
+    body: const Center(
+      child: Text('Welcome to Your Home Page!'),
+    ),
+    );
+  }
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: ChangeNotifierProvider(
+        create: (context) => ProductProvider(),
+        child: YourHomePage(), // Replace with your actual home page widget
+      ),
+    );
+  }
+}
