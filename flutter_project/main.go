@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	showproducts "newmos/newmos_api/Golistproduct"
+	productProvider "newmos/newmos_api/golangProductProvider"
+	
 	login "newmos/newmos_api/golanglogin"
 	products "newmos/newmos_api/golangnewproducts"
 	register "newmos/newmos_api/golangregister"
@@ -15,27 +17,14 @@ import (
 func Init() {
 	r := gin.Default()
 
-	// Register routes
 	r.POST("/register", register.Register)
 	r.POST("/login", login.Login)
-
-	// Product routes
-	r.GET("/products", products.GetProduct)                             // Get list of products
-	r.POST("/products", products.Product)                               // Add a new product
-	r.PUT("/products/update", products.UpdateProduct)                   // Update product details
-	r.GET("/ProductProvider/categories", productProvider.GetCategories) // Fetch available product categories
-	r.GET("/ProductProvider/search", productProvider.SearchProducts)    // Search products by name and category
-
-	// Product change history route
-	r.GET("/product-changes", products.GetProductChangeHistory)
-
-	// Show products route
+	r.GET("/products", products.GetProduct)
+	r.POST("/products", products.Product)
+	r.PUT("/products/update", products.UpdateProduct)
+	r.GET("/ProductProvider/search", productProvider.SearchProducts)
 	r.GET("/showproducts", showproducts.Showproducts)
-
-	// Serve static files (uploaded images, etc.)
 	r.Static("/uploads", "./uploads")
-
-	// Start the server on port 7070
 	r.Run(":7070")
 }
 func main() {

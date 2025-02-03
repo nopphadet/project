@@ -1,0 +1,96 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class ProductProvider extends StatefulWidget {
+  @override
+  _ProductProvider createState() => _ProductProvider();
+}
+
+class _ProductProvider extends State<ProductProvider> {
+  final TextEditingController _searchController = TextEditingController();
+
+  String _productName = '';
+  int _quantity = 0;
+  bool _isLoading = false;
+  final String baseURL =
+      'https://hfm99nd8-7070.asse.devtunnels.ms/ProductProvider/search?name=';
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _fetchProductData(String searchText) async {
+    setState(() => _isLoading = true);
+
+    try {
+      var response = await http.get(
+        Uri.parse('$baseURL$searchText'),
+      );
+
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        if (data['products'] != null && data['products'].isNotEmpty) {
+          setState(() {
+            _productName = data['products'][0]['product_name'] ?? 'ไม่ระบุชื่อ';
+            _quantity = data['products'][0]['quantity'] ?? 0;
+            
+          });
+        } else {
+          _showSnackBar('ไม่พบข้อมูลสินค้า');
+        }
+      } else {
+        _showSnackBar('ข้อผิดพลาดจากเซิร์ฟเวอร์: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('ค้นหาสินค้า'), backgroundColor: Colors.red),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSearchField(),
+            SizedBox(height: 16),
+            if (_isLoading) Center(child: CircularProgressIndicator()),
+            if (!_isLoading && _productName.isNotEmpty)
+              ..._buildProductDetails(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        labelText: 'จองสินค้า',
+        border: OutlineInputBorder(),
+        suffixIcon: IconButton(
+          icon: Icon(Icons.search),
+          onPressed: () {
+            _fetchProductData(_searchController.text.trim());
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildProductDetails() {
+    return [
+      Text('ชื่อสินค้า: $_productName', style: TextStyle(fontSize: 18)),
+      SizedBox(height: 8),
+      Text('จำนวนสินค้า: $_quantity', style: TextStyle(fontSize: 18)),
+    ];
+  }
+}
