@@ -5,7 +5,7 @@ import (
 	"log"
 	showproducts "newmos/newmos_api/Golistproduct"
 	productProvider "newmos/newmos_api/golangProductProvider"
-	
+
 	login "newmos/newmos_api/golanglogin"
 	products "newmos/newmos_api/golangnewproducts"
 	register "newmos/newmos_api/golangregister"
@@ -22,11 +22,14 @@ func Init() {
 	r.GET("/products", products.GetProduct)
 	r.POST("/products", products.Product)
 	r.PUT("/products/update", products.UpdateProduct)
-	r.GET("/ProductProvider/search", productProvider.SearchProducts)
+	r.GET("/ProductProvider/search", productProvider.SearchProducts)       // Search Products
+	r.POST("/ProductProvider/reserve", productProvider.ReserveProduct)     // Reserve Product
+	r.POST("/ProductProvider/confirm", productProvider.ConfirmReservation) // Confirm Reservation
 	r.GET("/showproducts", showproducts.Showproducts)
 	r.Static("/uploads", "./uploads")
 	r.Run(":7070")
 }
+
 func main() {
 
 	Init()

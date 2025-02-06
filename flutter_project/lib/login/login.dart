@@ -40,6 +40,7 @@ class Login extends StatelessWidget {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         prefs.setString('token', data['token']);
         prefs.setString('role', data['role']);
+        prefs.setString('userID', data['userID'].toString());
 
         print("=====================================");
         print(prefs.getString('token'));

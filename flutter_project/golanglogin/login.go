@@ -74,11 +74,12 @@ func Login(c *gin.Context) {
 	var (
 		hashedPassword string
 		role           string
+		userID         int
 	)
 
 	// ดึงข้อมูล hashed password และ role จากฐานข้อมูล
-	query := "SELECT password, role FROM users WHERE BINARY username = ?"
-	err = db.QueryRow(query, loginData.Username).Scan(&hashedPassword, &role)
+	query := "SELECT password, role,user_id FROM users WHERE BINARY username = ?"
+	err = db.QueryRow(query, loginData.Username).Scan(&hashedPassword, &role, &userID)
 	if err != nil {
 		log.Printf("ไม่พบชื่อผู้ใช้: %s - %v", loginData.Username, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
@@ -105,6 +106,7 @@ func Login(c *gin.Context) {
 		"message": "เข้าสู่ระบบสำเร็จ",
 		"role":    role,
 		"token":   token,
+		"userID":  userID,
 	})
 
 	fmt.Printf("ผู้ใช้ %s เข้าสู่ระบบด้วยสิทธิ์: %s\n", loginData.Username, role)

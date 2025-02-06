@@ -48,12 +48,12 @@ func Product(c *gin.Context) {
 	defer db.Close()
 
 	type Product struct {
-		ProductNumber string `json:"product_number" binding:"required"`
-		ProductName   string `json:"product_name" binding:"required"`
-		Category      string `json:"category" binding:"required"`
-		Quantity      int    `json:"quantity" binding:"required"`
-		Barcode       string `json:"barcode" binding:"required"`
-		StockStatus   string `json:"stock_status" binding:"required"`
+		ProductId   string `json:"product_id" binding:"required"`
+		ProductName string `json:"product_name" binding:"required"`
+		Category    string `json:"category" binding:"required"`
+		Quantity    int    `json:"quantity" binding:"required"`
+		Barcode     string `json:"barcode" binding:"required"`
+		StockStatus string `json:"stock_status" binding:"required"`
 	}
 
 	// ดึงข้อมูลจาก form
@@ -65,16 +65,16 @@ func Product(c *gin.Context) {
 	}
 
 	product := Product{
-		ProductNumber: c.DefaultPostForm("product_number", ""),
-		ProductName:   c.DefaultPostForm("product_name", ""),
-		Category:      c.DefaultPostForm("category", ""),
-		Quantity:      quantity,
-		Barcode:       c.DefaultPostForm("barcode", ""),
-		StockStatus:   c.DefaultPostForm("stock_status", ""),
+		ProductId:   c.DefaultPostForm("product_id", ""),
+		ProductName: c.DefaultPostForm("product_name", ""),
+		Category:    c.DefaultPostForm("category", ""),
+		Quantity:    quantity,
+		Barcode:     c.DefaultPostForm("barcode", ""),
+		StockStatus: c.DefaultPostForm("stock_status", ""),
 	}
 
 	// ตรวจสอบฟิลด์บังคับ
-	if product.ProductNumber == "" || product.ProductName == "" || product.Category == "" ||
+	if product.ProductId == "" || product.ProductName == "" || product.Category == "" ||
 		product.Barcode == "" || product.StockStatus == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "กรุณากรอกข้อมูลให้ครบถ้วน"})
 		return
@@ -94,10 +94,10 @@ func Product(c *gin.Context) {
 
 	// SQL สำหรับบันทึกข้อมูลสินค้า
 	query := `
-		INSERT INTO products (product_number, product_name, category, quantity, barcode, stock_status, image_path, created_at)
+		INSERT INTO products (product_id, product_name, category, quantity, barcode, stock_status, image_path, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
 
-	_, err = db.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, imagePath)
+	_, err = db.Exec(query, product.ProductId, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, imagePath)
 	if err != nil {
 		log.Printf("Error inserting product: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มสินค้าได้"})
@@ -119,7 +119,7 @@ func Product(c *gin.Context) {
 }
 
 type Product1 struct {
-	ProductNumber string `json:"product_number"`
+	ProductNumber string `json:"product_id"`
 	ProductName   string `json:"product_name"`
 	Quantity      int    `json:"quantity"`
 }
@@ -154,7 +154,7 @@ func UpdateProduct(c *gin.Context) {
 
 	// ตรวจสอบว่าสินค้ามีอยู่ในฐานข้อมูลหรือไม่
 	var product Product1
-	err = db.QueryRow("SELECT product_number, product_name, quantity FROM products WHERE barcode = ?", requestData.Barcode).
+	err = db.QueryRow("SELECT product_id, product_name, quantity FROM products WHERE barcode = ?", requestData.Barcode).
 		Scan(&product.ProductNumber, &product.ProductName, &product.Quantity)
 
 	if err == sql.ErrNoRows {
@@ -169,7 +169,7 @@ func UpdateProduct(c *gin.Context) {
 
 	// บันทึกการเปลี่ยนแปลงลงในตาราง product_changes
 	_, err = db.Exec(`
-		INSERT INTO product_changes (product_number, change_type, old_quantity, new_quantity, changed_by, created_at)
+		INSERT INTO product_changes (product_id, change_type, old_quantity, new_quantity, changed_by, created_at)
 		VALUES (?, 'UPDATE', ?, ?, ?, CURRENT_TIMESTAMP)`,
 		product.ProductNumber, product.Quantity, requestData.Quantity, "admin") // ใช้ "admin" แทนชื่อผู้ที่ทำการอัปเดตหรือดึงจาก JWT หรือการล็อกอิน
 
@@ -200,7 +200,7 @@ func UpdateProduct(c *gin.Context) {
 // GetProduct handles fetching product details by barcode
 func GetProduct(c *gin.Context) {
 	type Product1 struct {
-		ProductNumber string `json:"product_number"`
+		ProductNumber string `json:"product_id"`
 		ProductName   string `json:"product_name"`
 		Quantity      int    `json:"quantity"`
 	}
@@ -218,7 +218,7 @@ func GetProduct(c *gin.Context) {
 	}
 
 	var product Product1
-	err = db.QueryRow("SELECT product_number, product_name, quantity FROM products WHERE barcode = ?", barcode).
+	err = db.QueryRow("SELECT product_id, product_name, quantity FROM products WHERE barcode = ?", barcode).
 		Scan(&product.ProductNumber, &product.ProductName, &product.Quantity)
 
 	if err == sql.ErrNoRows {
@@ -234,7 +234,7 @@ func GetProduct(c *gin.Context) {
 	})
 }
 
-//  ดึงประวัติการเปลี่ยนแปลงสินค้าจากฐานข้อมูล
+// ดึงประวัติการเปลี่ยนแปลงสินค้าจากฐานข้อมูล
 func GetProductChangeHistory(c *gin.Context) {
 
 	db, err := getDBConnection()
@@ -245,7 +245,7 @@ func GetProductChangeHistory(c *gin.Context) {
 	defer db.Close()
 
 	rows, err := db.Query(`
-		SELECT ProductName, product_number, change_type, old_quantity, new_quantity, changed_by, created_at 
+		SELECT ProductName, product_id, change_type, old_quantity, new_quantity, changed_by, created_at 
 		FROM product_changes
 		ORDER BY created_at DESC`)
 	if err != nil {
@@ -270,13 +270,13 @@ func GetProductChangeHistory(c *gin.Context) {
 
 		// สร้างแผนที่สำหรับข้อมูลในแถวปัจจุบันและจัดการค่า NULL
 		productChanges = append(productChanges, map[string]interface{}{
-			"ProductName":    getStringValue(ProductName),
-			"product_number": getStringValue(productNumber),
-			"change_type":    getStringValue(changeType),
-			"old_quantity":   getIntValue(oldQuantity),
-			"new_quantity":   getIntValue(newQuantity),
-			"changed_by":     getStringValue(changedBy),
-			"created_at":     getStringValue(createdAt),
+			"ProductName":  getStringValue(ProductName),
+			"product_id":   getStringValue(productNumber),
+			"change_type":  getStringValue(changeType),
+			"old_quantity": getIntValue(oldQuantity),
+			"new_quantity": getIntValue(newQuantity),
+			"changed_by":   getStringValue(changedBy),
+			"created_at":   getStringValue(createdAt),
 		})
 	}
 

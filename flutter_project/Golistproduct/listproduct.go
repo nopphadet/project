@@ -31,17 +31,16 @@ func getDBConnection() (*sql.DB, error) {
 
 // Product - โครงสร้างข้อมูลสินค้า
 type Product struct {
-	ProductNumber string `json:"product_number"`
-	ProductName   string `json:"product_name"`
-	Category      string `json:"category"`
-	Quantity      int    `json:"quantity"`
-	Barcode       string `json:"barcode"`
-	StockStatus   string `json:"stock_status"`
-	ImagePath     string `json:"image_path"`
-	ImageUrl      string `json:"image_url"`
-	CreatedAt     string `json:"created_at"`
+	ProductId   string `json:"product_id"`
+	ProductName string `json:"product_name"`
+	Category    string `json:"category"`
+	Quantity    int    `json:"quantity"`
+	Barcode     string `json:"barcode"`
+	StockStatus string `json:"stock_status"`
+	ImagePath   string `json:"image_path"`
+	ImageUrl    string `json:"image_url"`
+	CreatedAt   string `json:"created_at"`
 }
-
 
 func Showproducts(c *gin.Context) {
 
@@ -53,7 +52,7 @@ func Showproducts(c *gin.Context) {
 	defer db.Close()
 
 	rows, err := db.Query(`
-		SELECT product_number, product_name, category, quantity, barcode, stock_status, image_path, created_at 
+		SELECT product_id, product_name, category, quantity, barcode, stock_status, image_path, created_at 
 		FROM products
 		ORDER BY created_at DESC`)
 	if err != nil {
@@ -66,7 +65,7 @@ func Showproducts(c *gin.Context) {
 
 	for rows.Next() {
 		var product Product
-		err := rows.Scan(&product.ProductNumber, &product.ProductName, &product.Category, &product.Quantity, &product.Barcode, &product.StockStatus, &product.ImagePath, &product.CreatedAt)
+		err := rows.Scan(&product.ProductId, &product.ProductName, &product.Category, &product.Quantity, &product.Barcode, &product.StockStatus, &product.ImagePath, &product.CreatedAt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการอ่านข้อมูล"})
 			return

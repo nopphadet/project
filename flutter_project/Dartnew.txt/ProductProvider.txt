@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductProvider extends StatefulWidget {
   @override
-  _ProductProvider createState() => _ProductProvider();
+  _ProductProviderState createState() => _ProductProviderState();
 }
 
-class _ProductProvider extends State<ProductProvider> {
+class _ProductProviderState extends State<ProductProvider> {
   final TextEditingController _searchController = TextEditingController();
-
-  String _productName = '';
-  int _quantity = 0;
-  bool _isLoading = false;
   final String baseURL =
       'https://hfm99nd8-7070.asse.devtunnels.ms/ProductProvider/search?name=';
+
+  List<Map<String, dynamic>> _products = [];
+  Future<void>? _searchFuture;
+  bool _isLoading = false;
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context)
@@ -22,23 +23,28 @@ class _ProductProvider extends State<ProductProvider> {
   }
 
   Future<void> _fetchProductData(String searchText) async {
+    if (searchText.isEmpty) {
+      _showSnackBar('กรุณาป้อนชื่อสินค้าที่ต้องการค้นหา');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      var response = await http.get(
-        Uri.parse('$baseURL$searchText'),
-      );
+      final url = Uri.parse('$baseURL$searchText');
+      print('Fetching: $url'); // Debugging URL
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        var data = json.decode(response.body);
-        if (data['products'] != null && data['products'].isNotEmpty) {
+        final data = json.decode(response.body);
+
+        if (data is List) {
           setState(() {
-            _productName = data['products'][0]['product_name'] ?? 'ไม่ระบุชื่อ';
-            _quantity = data['products'][0]['quantity'] ?? 0;
-            
+            _products = List<Map<String, dynamic>>.from(data);
           });
         } else {
           _showSnackBar('ไม่พบข้อมูลสินค้า');
+          setState(() => _products.clear());
         }
       } else {
         _showSnackBar('ข้อผิดพลาดจากเซิร์ฟเวอร์: ${response.statusCode}');
@@ -50,20 +56,52 @@ class _ProductProvider extends State<ProductProvider> {
     }
   }
 
+  void _showQuantityDialog(String productName) {
+    TextEditingController _quantityController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('เลือกจำนวนสินค้า'),
+        content: TextField(
+          controller: _quantityController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: 'ใส่จำนวน'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showSnackBar(
+                  'เลือก $productName จำนวน ${_quantityController.text} ชิ้น');
+            },
+            child: Text('ยืนยัน'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('ค้นหาสินค้า'), backgroundColor: Colors.red),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSearchField(),
             SizedBox(height: 16),
-            if (_isLoading) Center(child: CircularProgressIndicator()),
-            if (!_isLoading && _productName.isNotEmpty)
-              ..._buildProductDetails(),
+            Expanded(
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator()) // แสดง Loading
+                  : _products.isNotEmpty
+                      ? _buildProductList()
+                      : Center(child: Text("ไม่มีสินค้า")),
+            ),
           ],
         ),
       ),
@@ -74,23 +112,51 @@ class _ProductProvider extends State<ProductProvider> {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        labelText: 'จองสินค้า',
+        labelText: 'ค้นหาสินค้า',
         border: OutlineInputBorder(),
         suffixIcon: IconButton(
           icon: Icon(Icons.search),
           onPressed: () {
-            _fetchProductData(_searchController.text.trim());
+            setState(() {
+              _searchFuture = _fetchProductData(_searchController.text.trim());
+            });
           },
         ),
       ),
     );
   }
 
-  List<Widget> _buildProductDetails() {
-    return [
-      Text('ชื่อสินค้า: $_productName', style: TextStyle(fontSize: 18)),
-      SizedBox(height: 8),
-      Text('จำนวนสินค้า: $_quantity', style: TextStyle(fontSize: 18)),
-    ];
+  Widget _buildProductList() {
+    return ListView.builder(
+      itemCount: _products.length,
+      itemBuilder: (context, index) {
+        var product = _products[index];
+        String productName = product['product_name'] ?? 'ไม่ระบุชื่อ';
+        String imageUrl =
+            product['image_url'] ?? 'https://via.placeholder.com/100';
+        int quantity = product['quantity'] ?? 0;
+
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 8),
+          child: ListTile(
+            contentPadding: EdgeInsets.all(10),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => CircularProgressIndicator(),
+                errorWidget: (context, url, error) =>
+                    Icon(Icons.broken_image, size: 80, color: Colors.grey),
+              ),
+            ),
+            title: Text('$productName (เหลือ: $quantity)'),
+            onTap: () => _showQuantityDialog(productName),
+          ),
+        );
+      },
+    );
   }
 }

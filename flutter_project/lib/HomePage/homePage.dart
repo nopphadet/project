@@ -39,7 +39,7 @@ class ProductDetailPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(product.productName),
-        backgroundColor: Colors.red,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -140,11 +140,28 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ระบบจัดการสินค้า'),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        title: Row(
+          // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'ระบบจัดการสินค้า',
+              style: TextStyle(color: Colors.white),
+            ),
+            Image.asset(
+              'assets/PNG/LOGO.png',
+              height: 40,
+              width: 40,
+            ),
+          ],
+        ),
+        backgroundColor: const Color.fromARGB(255, 255, 0, 0),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: const Color.fromARGB(
+                  255, 255, 255, 255), // Change this to the desired color
+            ),
             onPressed: () {
               SharedPreferences.getInstance().then((prefs) {
                 prefs.remove(
@@ -164,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 229, 9, 20),
+              Color.fromARGB(255, 255, 255, 255),
               Color.fromARGB(255, 245, 245, 241),
             ],
             begin: Alignment.topCenter,
@@ -177,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 50),
+                const SizedBox(height: 10),
                 _buildSquareBoxWithText(
                   context,
                   'สวัสดีคุณ Besttoo',
@@ -197,63 +214,66 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    //  Container(
-                    //     padding: const EdgeInsets.all(10),
-                    //     decoration: BoxDecoration(
-                    //       color: Colors.white,
-                    //       borderRadius: BorderRadius.circular(16),
-                    //       boxShadow: const [
-                    //         BoxShadow(
-                    //           color: Colors.black12,
-                    //           blurRadius: 8,
-                    //           offset: Offset(0, 4),
-                    //         ),
-                    //       ],
-                    //     ),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        if (role == '1') // ใช้ role จาก Widget
-                          _buildCategoryButton(
-                            context,
-                            'assets/PNG/box.png',
-                            'สินค้า',
-                            ProductListPage(),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(155, 252, 252, 252),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
                           ),
-                        if (role == '2' || role == '1')
-                          _buildCategoryButton(
-                            context,
-                            'assets/PNG/new-product.png',
-                            'เพิ่มเข้าใหม่',
-                            AddProductPage(),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              if (role == '1') // ใช้ role จาก Widget
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/box.png',
+                                  'สินค้า',
+                                  ProductListPage(),
+                                ),
+                              if (role == '2' || role == '1')
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/new-product.png',
+                                  'เพิ่มเข้าใหม่',
+                                  AddProductPage(),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        if (role == '3' || role == '1')
-                          _buildCategoryButton(
-                            context,
-                            'assets/PNG/out-of-stock.png',
-                            'จองสินค้า',
-                            ProductProvider(),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              if (role == '3' || role == '1')
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/out-of-stock.png',
+                                  'จองสินค้า',
+                                  ProductProvider(),
+                                ),
+                              if (role == '1')
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/file.png',
+                                  'คืนสินค้า',
+                                  HistoryPage(),
+                                ),
+                            ],
                           ),
-                        if (role == '1')
-                          _buildCategoryButton(
-                            context,
-                            'assets/PNG/file.png',
-                            'คืนสินค้า',
-                            HistoryPage(),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                // ),
-                // ],
-                // ),
                 const SizedBox(height: 20),
                 FutureBuilder<List<Product>>(
                   future: productsFuture,
@@ -316,7 +336,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildSquareBoxWithText(
       BuildContext context, String text, String description, Widget nextPage,
-      {double width = 350, double height = 200}) {
+      {double width = 100, double height = 150}) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -336,7 +356,7 @@ class _LoginPageState extends State<LoginPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20.0),
+          borderRadius: BorderRadius.circular(30.0),
           boxShadow: const [
             BoxShadow(
               color: Colors.black26,
@@ -395,7 +415,7 @@ class _LoginPageState extends State<LoginPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: const [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: Color.fromARGB(43, 0, 0, 0),
                   blurRadius: 8,
                   offset: Offset(0, 4),
                 ),

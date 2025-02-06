@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_project/ProductProvider/ProductProvider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_project/AddProductPage/AddProduct.dart';
 import 'package:flutter_project/HistoryPage/historyPage.dart';
-import 'package:flutter_project/Outfoproduct/outfoproduct.dart';
 import 'package:flutter_project/Product/product.dart';
 import 'package:flutter_project/login/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // โมเดลสินค้า
 class Product {
@@ -38,7 +39,7 @@ class ProductDetailPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(product.productName),
-        backgroundColor: Colors.red,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -82,7 +83,9 @@ class ProductDetailPage extends StatelessWidget {
 }
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String role; // เพิ่มตัวแปรสำหรับ permission
+
+  const LoginPage({super.key, required this.role});
 
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -90,15 +93,29 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   late Future<List<Product>> productsFuture;
+  String? role;
 
   @override
   void initState() {
-    super.initState();
     productsFuture = fetchProductsFromApi();
+    print("role");
+    print(role);
+    print("===================================");
+    super.initState();
   }
 
   // ดึงข้อมูลสินค้าจาก API
   Future<List<Product>> fetchProductsFromApi() async {
+    Future<SharedPreferences> prefs = SharedPreferences.getInstance();
+    String? roleNew = await prefs.then((value) => value.getString('role'));
+    setState(() {
+      role = roleNew;
+    });
+
+    print("-------------------------------------------");
+    print("role");
+    print(role);
+
     const String apiUrl =
         "https://hfm99nd8-7070.asse.devtunnels.ms/showproducts";
 
@@ -118,17 +135,38 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    int availableStock = 100; // ตัวอย่างข้อมูล
-    int damagedStock = 5; // ตัวอย่างข้อมูล
+    int availableStock = 100;
+    int damagedStock = 5;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ระบบจัดการสินค้า'),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+  title: Row(
+    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      const Text('ระบบจัดการสินค้า'),
+      Image.asset(
+        'assets/PNG/LOGO.png',
+        height: 40,
+        width: 40,
+      ),
+    ],
+  ),
+  foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+  backgroundColor: const Color.fromARGB(255, 255, 0, 0),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: const Color.fromARGB(
+                  255, 255, 255, 255), // Change this to the desired color
+            ),
             onPressed: () {
+              SharedPreferences.getInstance().then((prefs) {
+                prefs.remove(
+                    'token'); // ลบ token ออกจาก SharedPreferences โดยใช้ remove
+                prefs.remove(
+                    'role'); // ลบ role ออกจาก SharedPreferences โดยใช้ remove ออกจากระบบ
+              });
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => Login()),
@@ -141,152 +179,155 @@ class _LoginPageState extends State<LoginPage> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 229, 9, 20), // Red color on top
-              Color.fromARGB(255, 245, 245, 241), // White color on bottom
+              Color.fromARGB(255, 255, 255, 255),
+              Color.fromARGB(255, 245, 245, 241),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: const EdgeInsets.all(30),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      const SizedBox(height: 50),
-                      _buildSquareBoxWithText(
-                        context,
-                        'สวัสดีคุณ Besttoo',
-                        'สินค้าคงเหลือ: $availableStock ชิ้น\nสินค้าเสียหาย: $damagedStock ชิ้น',
-                        AddProductPage(),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'หมวดหมู่',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color.fromARGB(255, 0, 0, 0),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            _buildCategoryButton(context, 'assets/PNG/box.png',
-                                'สินค้า', ProductListPage()),
-                            const SizedBox(width: 15),
-                            _buildCategoryButton(
-                                context,
-                                'assets/PNG/new-product.png',
-                                'เพิ่มเข้า',
-                                AddProductPage()),
-                            const SizedBox(width: 15),
-                            _buildCategoryButton(
-                                context,
-                                'assets/PNG/out-of-stock.png',
-                                'นำออก',
-                                ManageProductPage()),
-                            const SizedBox(width: 15),
-                            _buildCategoryButton(context, 'assets/PNG/file.png',
-                                'ประวัติ', HistoryPage()),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'รายการล่าสุด',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color.fromARGB(255, 34, 31, 31),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      FutureBuilder<List<Product>>(
-                        future: productsFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          } else if (snapshot.hasError) {
-                            return Center(
-                              child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'),
-                            );
-                          } else if (!snapshot.hasData ||
-                              snapshot.data!.isEmpty) {
-                            return const Center(
-                              child: Text('ไม่มีสินค้าล่าสุด'),
-                            );
-                          } else {
-                            final products = snapshot.data!;
-                            final uniqueImageUrls = <String>{};
-                            final uniqueProducts = products
-                                .where((product) {
-                                  if (uniqueImageUrls
-                                      .contains(product.imageUrl)) {
-                                    return false;
-                                  } else {
-                                    uniqueImageUrls.add(product.imageUrl);
-                                    return true;
-                                  }
-                                })
-                                .take(4)
-                                .toList();
-
-                            return GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 20,
-                                childAspectRatio: 1.0,
-                              ),
-                              itemCount: uniqueProducts.length,
-                              itemBuilder: (context, index) {
-                                final product = uniqueProducts[index];
-                                return _buildSquareImageWithDescription(
-                                  context,
-                                  product.imageUrl,
-                                  product.productName,
-                                  product, // ส่งข้อมูลของ product ไปยังหน้ารายละเอียดสินค้า
-                                );
-                              },
-                            );
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 15),
-                    ],
-                  ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 10),
+                _buildSquareBoxWithText(
+                  context,
+                  'สวัสดีคุณ Besttoo',
+                  'สินค้าคงเหลือ: $availableStock ชิ้น\nสินค้าเสียหาย: $damagedStock ชิ้น',
+                  AddProductPage(),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'หมวดหมู่',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 0, 0, 0),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(155, 252, 252, 252),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              if (role == '1') // ใช้ role จาก Widget
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/box.png',
+                                  'สินค้า',
+                                  ProductListPage(),
+                                ),
+                              if (role == '2' || role == '1')
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/new-product.png',
+                                  'เพิ่มเข้าใหม่',
+                                  AddProductPage(),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              if (role == '3' || role == '1')
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/out-of-stock.png',
+                                  'จองสินค้า',
+                                  ProductProvider(),
+                                ),
+                              if (role == '1')
+                                _buildCategoryButton(
+                                  context,
+                                  'assets/PNG/file.png',
+                                  'คืนสินค้า',
+                                  HistoryPage(),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                FutureBuilder<List<Product>>(
+                  future: productsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(
+                        child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'),
+                      );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text('ไม่มีสินค้าล่าสุด'));
+                    } else {
+                      final products = snapshot.data!;
+                      final uniqueImageUrls = <String>{};
+                      final uniqueProducts = products
+                          .where((product) {
+                            if (uniqueImageUrls.contains(product.imageUrl)) {
+                              return false;
+                            } else {
+                              uniqueImageUrls.add(product.imageUrl);
+                              return true;
+                            }
+                          })
+                          .take(4)
+                          .toList();
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 20,
+                          childAspectRatio: 1.0,
+                        ),
+                        itemCount: uniqueProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = uniqueProducts[index];
+                          return _buildSquareImageWithDescription(
+                            context,
+                            product.imageUrl,
+                            product.productName,
+                            product,
+                          );
+                        },
+                      );
+                    }
+                  },
+                ),
+                //  ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -294,7 +335,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildSquareBoxWithText(
       BuildContext context, String text, String description, Widget nextPage,
-      {double width = 350, double height = 200}) {
+      {double width = 100, double height = 150}) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -314,7 +355,7 @@ class _LoginPageState extends State<LoginPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20.0),
+          borderRadius: BorderRadius.circular(30.0),
           boxShadow: const [
             BoxShadow(
               color: Colors.black26,
@@ -373,7 +414,7 @@ class _LoginPageState extends State<LoginPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: const [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: Color.fromARGB(43, 0, 0, 0),
                   blurRadius: 8,
                   offset: Offset(0, 4),
                 ),

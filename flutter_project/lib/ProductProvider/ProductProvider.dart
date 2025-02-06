@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductProvider extends StatefulWidget {
   @override
@@ -11,11 +12,9 @@ class ProductProvider extends StatefulWidget {
 class _ProductProviderState extends State<ProductProvider> {
   final TextEditingController _searchController = TextEditingController();
   final String baseURL =
-      'https://hfm99nd8-7070.asse.devtunnels.ms/ProductProvider/search?name=';
+      'https://hfm99nd8-7070.asse.devtunnels.ms/ProductProvider';
 
   List<Map<String, dynamic>> _products = [];
-  Map<String, int> _selectedQuantities = {};
-  Future<void>? _searchFuture;
   bool _isLoading = false;
 
   void _showSnackBar(String message) {
@@ -32,8 +31,7 @@ class _ProductProviderState extends State<ProductProvider> {
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse('$baseURL$searchText');
-      print('Fetching: $url'); // Debugging URL
+      final url = Uri.parse('$baseURL/search?name=$searchText');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -42,7 +40,6 @@ class _ProductProviderState extends State<ProductProvider> {
         if (data is List) {
           setState(() {
             _products = List<Map<String, dynamic>>.from(data);
-            _selectedQuantities.clear();
           });
         } else {
           _showSnackBar('ไม่พบข้อมูลสินค้า');
@@ -58,10 +55,85 @@ class _ProductProviderState extends State<ProductProvider> {
     }
   }
 
-  void _updateQuantity(String productId, int newQuantity) {
-    setState(() {
-      _selectedQuantities[productId] = newQuantity;
-    });
+  Future<void> _reserveProduct(int productId, int quantity) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userID"); // Replace with actual user ID
+    final url = Uri.parse('$baseURL/reserve');
+
+    try {
+      final response = await http.post(url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'user_id': userId,
+            'product_id': productId,
+            'quantity': quantity,
+          }));
+
+      if (response.statusCode == 200) {
+        _showSnackBar('การจองสินค้าสำเร็จ');
+      } else {
+        _showSnackBar('เกิดข้อผิดพลาดในการจอง');
+      }
+    } catch (e) {
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  Future<void> _confirmReservation(int reservationId) async {
+    final url = Uri.parse('$baseURL/confirm');
+
+    try {
+      final response = await http.post(url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'reservation_id': reservationId,
+          }));
+
+      if (response.statusCode == 200) {
+        _showSnackBar('ยืนยันการจองสำเร็จ');
+      } else {
+        _showSnackBar('เกิดข้อผิดพลาดในการยืนยันการจอง');
+      }
+    } catch (e) {
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  void _showQuantityDialog(int productId) {
+    TextEditingController _quantityController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('เลือกจำนวนสินค้า'),
+        content: TextField(
+          controller: _quantityController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: 'ใส่จำนวน'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              int quantity = int.tryParse(_quantityController.text) ?? 0;
+              if (quantity > 0) {
+                _reserveProduct(productId, quantity);
+              } else {
+                _showSnackBar('กรุณากรอกจำนวนที่ถูกต้อง');
+              }
+            },
+            child: Text('ยืนยัน'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -76,7 +148,7 @@ class _ProductProviderState extends State<ProductProvider> {
             SizedBox(height: 16),
             Expanded(
               child: _isLoading
-                  ? Center(child: CircularProgressIndicator()) // แสดง Loading
+                  ? Center(child: CircularProgressIndicator())
                   : _products.isNotEmpty
                       ? _buildProductList()
                       : Center(child: Text("ไม่มีสินค้า")),
@@ -95,11 +167,7 @@ class _ProductProviderState extends State<ProductProvider> {
         border: OutlineInputBorder(),
         suffixIcon: IconButton(
           icon: Icon(Icons.search),
-          onPressed: () {
-            setState(() {
-              _searchFuture = _fetchProductData(_searchController.text.trim());
-            });
-          },
+          onPressed: () => _fetchProductData(_searchController.text.trim()),
         ),
       ),
     );
@@ -110,12 +178,11 @@ class _ProductProviderState extends State<ProductProvider> {
       itemCount: _products.length,
       itemBuilder: (context, index) {
         var product = _products[index];
-        String productId = product['product_number'].toString();
         String productName = product['product_name'] ?? 'ไม่ระบุชื่อ';
         String imageUrl =
             product['image_url'] ?? 'https://via.placeholder.com/100';
         int quantity = product['quantity'] ?? 0;
-        int selectedQuantity = _selectedQuantities[productId] ?? 0;
+        int productId = product['product_id'] ?? 0;
 
         return Card(
           margin: EdgeInsets.symmetric(vertical: 8),
@@ -134,23 +201,7 @@ class _ProductProviderState extends State<ProductProvider> {
               ),
             ),
             title: Text('$productName (เหลือ: $quantity)'),
-            subtitle: Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.remove),
-                  onPressed: selectedQuantity > 0
-                      ? () => _updateQuantity(productId, selectedQuantity - 1)
-                      : null,
-                ),
-                Text('$selectedQuantity', style: TextStyle(fontSize: 18)),
-                IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: selectedQuantity < quantity
-                      ? () => _updateQuantity(productId, selectedQuantity + 1)
-                      : null,
-                ),
-              ],
-            ),
+            onTap: () => _showQuantityDialog(productId),
           ),
         );
       },

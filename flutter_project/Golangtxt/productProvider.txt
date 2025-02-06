@@ -11,7 +11,7 @@ import (
 )
 
 func getDBConnection() (*sql.DB, error) {
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s&charset=utf8mb4")
+	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s")
 	if err != nil {
 		return nil, err
 	}
@@ -26,6 +26,18 @@ func getDBConnection() (*sql.DB, error) {
 	return db, nil
 }
 
+type Product struct {
+	ProductId   string `json:"product_id"`
+	ProductName string `json:"product_name"`
+	Category    string `json:"category"`
+	Quantity    int    `json:"quantity"`
+	Barcode     string `json:"barcode"`
+	StockStatus string `json:"stock_status"`
+	ImagePath   string `json:"image_path"`
+	ImageUrl    string `json:"image_url"`
+	CreatedAt   string `json:"created_at"`
+}
+
 func SearchProducts(c *gin.Context) {
 	db, err := getDBConnection()
 	if err != nil {
@@ -38,7 +50,9 @@ func SearchProducts(c *gin.Context) {
 	productName := c.DefaultQuery("name", "")
 	category := c.DefaultQuery("category", "")
 
-	query := "SELECT product_number, product_name, category, image_path, quantity, barcode FROM products WHERE 1=1"
+	query := `
+		SELECT product_id, product_name, category, quantity, barcode, stock_status, image_path, created_at
+		FROM products WHERE 1=1`
 	var args []interface{}
 
 	if productName != "" {
@@ -51,6 +65,8 @@ func SearchProducts(c *gin.Context) {
 		args = append(args, category)
 	}
 
+	// query += " ORDER BY created_at DESC" //ดึงสินค้าล่าสุดก่อน
+
 	log.Printf("Executing query: %s, args: %v", query, args)
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -60,29 +76,27 @@ func SearchProducts(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	var products []map[string]interface{}
+	products := []Product{}
+
 	for rows.Next() {
-		var productNumber, productName, category, barcode string
-		var quantity int
-		if err := rows.Scan(&productNumber, &productName, &category, &quantity, &barcode); err != nil {
+		var product Product
+		err := rows.Scan(&product.ProductId, &product.ProductName, &product.Category, &product.Quantity, &product.Barcode, &product.StockStatus, &product.ImagePath, &product.CreatedAt)
+		if err != nil {
 			log.Printf("Error scanning product: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลสินค้าได้"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการอ่านข้อมูล"})
 			return
 		}
 
-		products = append(products, map[string]interface{}{
-			"product_number": productNumber,
-			"product_name":   productName,
-			"category":       category,
-			"quantity":       quantity,
-			"barcode":        barcode,
-		})
+		product.ImageUrl = "https://hfm99nd8-7070.asse.devtunnels.ms/" + product.ImagePath
+		log.Println("Constructed Image URL:", product.ImageUrl)
+
+		products = append(products, product)
 	}
 
 	if len(products) == 0 {
-		c.JSON(http.StatusOK, gin.H{"message": "ไม่พบข้อมูลสินค้า", "products": []map[string]interface{}{}})
+		c.JSON(http.StatusOK, gin.H{"message": "ไม่มีสินค้าในระบบ"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"products": products})
+	c.JSON(http.StatusOK, products)
 }
