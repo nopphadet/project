@@ -312,3 +312,56 @@ func getIntValue(input sql.NullInt32) int {
 	}
 	return 0 // คืนค่าเริ่มต้นเมื่อเป็น NULL
 }
+
+// ฟังก์ชันสำหรับการสแกนบาร์โค้ดเพื่อเพิ่มสินค้า
+func HandleScanBarcode(c *gin.Context) {
+	
+	db, err := getDBConnection()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		return
+	}
+
+	
+	type Request struct {
+		Barcode string `json:"barcode"`
+	}
+
+	var req Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	barcode := req.Barcode
+	var quantity int
+	var productID int
+
+	
+	err = db.QueryRow("SELECT product_id, quantity FROM products WHERE barcode = ?", barcode).Scan(&productID, &quantity)
+	if err == sql.ErrNoRows {
+		// สินค้าไม่พบในระบบ ไม่เก็บข้อมูลลงฐานข้อมูล
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "not_found",
+			"message": "Product not found, but it will be added temporarily",
+		})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+
+	
+	newQuantity := quantity + 1
+	_, err = db.Exec("UPDATE products SET quantity = ? WHERE product_id = ?", newQuantity, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update quantity"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":       "updated",
+		"message":      "Quantity updated",
+		"new_quantity": newQuantity,
+	})
+}

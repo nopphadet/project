@@ -26,6 +26,7 @@ func Init() {
 	r.POST("/ProductProvider/reserve", productProvider.ReserveProduct)     // Reserve Product
 	r.POST("/ProductProvider/confirm", productProvider.ConfirmReservation) // Confirm Reservation
 	r.GET("/showproducts", showproducts.Showproducts)
+	r.POST("/api/scan", products.HandleScanBarcode)
 	r.Static("/uploads", "./uploads")
 	r.Run(":7070")
 }
