@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.flutter_project"
-    compileSdk = 34  // กำหนดเป็นตัวเลขแทน
+    compileSdk = 34  
 
     ndkVersion "25.1.8937393"
 
@@ -22,9 +22,9 @@ android {
 
     defaultConfig {
         applicationId = "com.example.flutter_project"
-        minSdk = 21  // กำหนดค่าที่รองรับแอปของคุณ
+        minSdk = 21  
         targetSdk = flutter.targetSdkVersion
-        versionCode = 1  // กำหนดเป็นตัวเลข
+        versionCode = 1  
         versionName = "1.0.0"
     }
 

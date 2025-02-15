@@ -1,11 +1,12 @@
 package main
 
 import (
-	"database/sql"
+	"fmt"
 	"log"
 	showproducts "newmos/newmos_api/Golistproduct"
 	productProvider "newmos/newmos_api/golangProductProvider"
 
+	db "newmos/newmos_api/db"
 	login "newmos/newmos_api/golanglogin"
 	products "newmos/newmos_api/golangnewproducts"
 	register "newmos/newmos_api/golangregister"
@@ -15,34 +16,40 @@ import (
 )
 
 func Init() {
-	r := gin.Default()
 
-	r.POST("/register", register.Register)
-	r.POST("/login", login.Login)
-	r.GET("/products", products.GetProduct)
-	r.POST("/products", products.Product)
-	r.PUT("/products/update", products.UpdateProduct)
-	r.GET("/ProductProvider/search", productProvider.SearchProducts)       // Search Products
-	r.POST("/ProductProvider/reserve", productProvider.ReserveProduct)     // Reserve Product
-	r.POST("/ProductProvider/confirm", productProvider.ConfirmReservation) // Confirm Reservation
-	r.GET("/showproducts", showproducts.Showproducts)
-	r.POST("/api/scan", products.HandleScanBarcode)
+	r := gin.Default()
+	db, err := db.InitDB()
+	if err != nil {
+		log.Fatalf("Error connecting to database: %v", err)
+	}
+	fmt.Println(db)
+	NewRegister := register.NewRegister(db)
+	r.POST("/register", NewRegister.Register)
+
+	Newproduct := products.NewProduct(db)
+	r.POST("/products", Newproduct.Product)
+	r.PUT("/products/update", Newproduct.UpdateProduct)
+	r.GET("/products", Newproduct.GetProduct)
+	r.POST("/api/scan", Newproduct.HandleScanBarcode)
+
+	Newprovider := productProvider.NewProvider(db)
+	r.GET("/ProductProvider/search", Newprovider.SearchProducts)
+	r.POST("/ProductProvider/reserve", Newprovider.ReserveProduct)
+	r.POST("/ProductProvider/confirm", Newprovider.ConfirmReservation)
+
+	Newlogin := login.Newlogin(db)
+	r.POST("/login", Newlogin.Login)
+
+	Newshowproducts := showproducts.Newlogin(db)
+	r.GET("/showproducts", Newshowproducts.Showproducts)
+
 	r.Static("/uploads", "./uploads")
 	r.Run(":7070")
+
 }
 
 func main() {
 
 	Init()
 
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
-	if err != nil {
-		log.Fatalf("ไม่สามารถเชื่อมต่อฐานข้อมูล: %v", err)
-	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
-		log.Fatalf("การเชื่อมต่อฐานข้อมูลล้มเหลว: %v", err)
-	}
-	r := gin.Default()
-	r.Run(":7070")
 }

@@ -12,7 +12,7 @@ class Login extends StatelessWidget {
   final TextEditingController passwordController = TextEditingController();
   final storage = const FlutterSecureStorage(); // Secure storage for token
 
-// ฟังก์ชันสำหรับล็อกอิน
+  // ฟังก์ชันสำหรับล็อกอิน
   Future<void> login(BuildContext context) async {
     final String username = usernameController.text.trim();
     final String password = passwordController.text.trim();
@@ -35,15 +35,26 @@ class Login extends StatelessWidget {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await storage.write(key: 'token', value: data['token']);
-        await storage.write(key: 'role', value: data['role']);
+        final username = data['username'];
+        final token = data['token'];
+        final role = data['role'];
+        final userID = data['userID'];
+        final product_id = data['product_id'];
+
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('token', data['token']);
-        prefs.setString('role', data['role']);
-        prefs.setString('userID', data['userID'].toString());
+
+        DateTime expiryDate = DateTime.now().add(Duration(minutes: 5));
+        prefs.setString('token', token);
+        prefs.setString('role', role);
+        prefs.setString('username', username.toString());
+        prefs.setString('userID', userID.toString());
+        prefs.setString('product_id', product_id.toString());
+        prefs.setString('expiryDate', expiryDate.toIso8601String());
 
         print("=====================================");
         print(prefs.getString('token'));
+        print(username.toString());
+        print("Expiry Date: ${prefs.getString('expiryDate')}");
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'])),
@@ -75,7 +86,7 @@ class Login extends StatelessWidget {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (context) => const LoginPage(
+              builder: (context) => LoginPage(
                     role: '',
                   )),
         );
@@ -230,5 +241,24 @@ class Login extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> checkTokenExpiry() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+    String? expiryDateString = prefs.getString('expiryDate');
+
+    if (token != null && expiryDateString != null) {
+      DateTime expiryDate = DateTime.parse(expiryDateString);
+      if (expiryDate.isBefore(DateTime.now())) {
+        prefs.remove('token');
+        prefs.remove('expiryDate');
+        print("Token expired. Please login again.");
+      } else {
+        print("Token is still valid.");
+      }
+    } else {
+      print("No token found.");
+    }
   }
 }

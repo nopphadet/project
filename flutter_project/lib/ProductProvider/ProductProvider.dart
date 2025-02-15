@@ -24,7 +24,7 @@ class _ProductProviderState extends State<ProductProvider> {
 
   Future<void> _fetchProductData(String searchText) async {
     if (searchText.isEmpty) {
-      _showSnackBar('กรุณาป้อนชื่อสินค้าที่ต้องการค้นหา');
+      _showSnackBar('กรุณาป้อนชื่อวัสดุที่ต้องการค้นหา');
       return;
     }
 
@@ -139,7 +139,9 @@ class _ProductProviderState extends State<ProductProvider> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('ค้นหาสินค้า'), backgroundColor: Colors.red),
+      appBar: AppBar(
+          title: Text('จองวัสดุ', style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.red),
       body: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -151,7 +153,7 @@ class _ProductProviderState extends State<ProductProvider> {
                   ? Center(child: CircularProgressIndicator())
                   : _products.isNotEmpty
                       ? _buildProductList()
-                      : Center(child: Text("ไม่มีสินค้า")),
+                      : Center(child: Text("ไม่มีวัสดุ")),
             ),
           ],
         ),
@@ -163,7 +165,7 @@ class _ProductProviderState extends State<ProductProvider> {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        labelText: 'ค้นหาสินค้า',
+        labelText: 'ค้นหาวัสดุ',
         border: OutlineInputBorder(),
         suffixIcon: IconButton(
           icon: Icon(Icons.search),

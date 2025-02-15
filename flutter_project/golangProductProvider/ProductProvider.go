@@ -5,27 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
+
+	// "time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
-
-func getDBConnection() (*sql.DB, error) {
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s")
-	if err != nil {
-		return nil, err
-	}
-
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-	return db, nil
-}
 
 type Product struct {
 	ProductId   int    `json:"product_id"`
@@ -38,15 +23,17 @@ type Product struct {
 	ImageUrl    string `json:"image_url"`
 	CreatedAt   string `json:"created_at"`
 }
+type ProductProviderController struct {
+	dbClient *sql.DB
+}
 
-func SearchProducts(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
+func NewProvider(dbClient *sql.DB) *ProductProviderController {
+	return &ProductProviderController{
+		dbClient: dbClient,
 	}
-	defer db.Close()
+}
+
+func (p *ProductProviderController) SearchProducts(c *gin.Context) {
 
 	productName := c.DefaultQuery("name", "")
 	category := c.DefaultQuery("category", "")
@@ -69,7 +56,7 @@ func SearchProducts(c *gin.Context) {
 	query += " ORDER BY created_at DESC" //ดึงสินค้าล่าสุดก่อน
 
 	log.Printf("Executing query: %s, args: %v", query, args)
-	rows, err := db.Query(query, args...)
+	rows, err := p.dbClient.Query(query, args...)
 	if err != nil {
 		log.Printf("Error fetching products: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถค้นหาสินค้าได้"})
@@ -102,14 +89,7 @@ func SearchProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
-func ReserveProduct(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
+func (p *ProductProviderController) ReserveProduct(c *gin.Context) {
 
 	var req struct {
 		UserID    string `json:"user_id"`
@@ -127,7 +107,7 @@ func ReserveProduct(c *gin.Context) {
 	// ตรวจสอบว่าผู้ใช้มีอยู่หรือไม่
 	fmt.Println(req.UserID)
 	var userExists int
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE user_id = ?)", req.UserID).Scan(&userExists)
+	err := p.dbClient.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE user_id = ?)", req.UserID).Scan(&userExists)
 	if err != nil {
 		log.Printf("Error checking user existence: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการตรวจสอบข้อมูลผู้ใช้"})
@@ -142,7 +122,7 @@ func ReserveProduct(c *gin.Context) {
 
 	// ตรวจสอบว่าผลิตภัณฑ์มีอยู่หรือไม่
 	var productExists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE product_id = ?)", req.ProductID).Scan(&productExists)
+	err = p.dbClient.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE product_id = ?)", req.ProductID).Scan(&productExists)
 	if err != nil {
 		log.Printf("Error checking product existence: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการตรวจสอบข้อมูลสินค้า"})
@@ -157,7 +137,7 @@ func ReserveProduct(c *gin.Context) {
 
 	// ตรวจสอบว่าสินค้ามีพอให้จองหรือไม่
 	var availableStock int
-	err = db.QueryRow("SELECT quantity FROM products WHERE product_id = ?", req.ProductID).Scan(&availableStock)
+	err = p.dbClient.QueryRow("SELECT quantity FROM products WHERE product_id = ?", req.ProductID).Scan(&availableStock)
 	if err == sql.ErrNoRows {
 		log.Printf("Product not found: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบสินค้าในระบบ"})
@@ -176,7 +156,7 @@ func ReserveProduct(c *gin.Context) {
 	}
 
 	// บันทึกการจอง
-	_, err = db.Exec(`
+	_, err = p.dbClient.Exec(`
     INSERT INTO reservations (user_id, product_id, quantity, status, expires_at) 
     VALUES (?, ?, ?, 'pending', DATE_ADD(NOW(), INTERVAL 30 MINUTE))`,
 		req.UserID, req.ProductID, req.Quantity)
@@ -189,15 +169,8 @@ func ReserveProduct(c *gin.Context) {
 	log.Printf("UserID: %d, ProductID: %d, Quantity: %d", req.UserID, req.ProductID, req.Quantity)
 }
 
-func ConfirmReservation(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
+func (p *ProductProviderController) ConfirmReservation(c *gin.Context) {
+	
 	var req struct {
 		ReservationID int `json:"reservation_id"`
 	}
@@ -210,7 +183,7 @@ func ConfirmReservation(c *gin.Context) {
 	// ตรวจสอบว่าการจองมีอยู่และยังไม่หมดอายุ
 	var status string
 	var productID, quantity int
-	err = db.QueryRow("SELECT product_id, quantity, status FROM reservations WHERE id = ? AND expires_at > NOW()", req.ReservationID).
+	err := p.dbClient.QueryRow("SELECT product_id, quantity, status FROM reservations WHERE id = ? AND expires_at > NOW()", req.ReservationID).
 		Scan(&productID, &quantity, &status)
 
 	if err != nil {
@@ -224,8 +197,8 @@ func ConfirmReservation(c *gin.Context) {
 	}
 
 	// อัปเดตสถานะเป็น "confirmed" และลด stock สินค้า
-	_, err = db.Exec("UPDATE reservations SET status = 'confirmed' WHERE reserve_id = ?", req.ReservationID)
-	_, err = db.Exec("UPDATE products SET quantity = quantity - ? WHERE product_id = ?", quantity, productID)
+	_, err = p.dbClient.Exec("UPDATE reservations SET status = 'confirmed' WHERE reserve_id = ?", req.ReservationID)
+	_, err = p.dbClient.Exec("UPDATE products SET quantity = quantity - ? WHERE product_id = ?", quantity, productID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to confirm reservation"})

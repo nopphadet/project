@@ -15,6 +15,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type ProductController struct {
+	dbClient *sql.DB
+}
+
+func Newlogin(dbClient *sql.DB) *ProductController {
+	return &ProductController{
+		dbClient: dbClient,
+	}
+}
+
 // ฟังก์ชันสำหรับสร้าง JWT Token
 func generateToken(username, role string) (string, error) {
 	secretKey := os.Getenv("JWT_SECRET") // ใช้ environment variable สำหรับความปลอดภัย
@@ -33,18 +43,10 @@ func generateToken(username, role string) (string, error) {
 }
 
 // ฟังก์ชัน Login
-func Login(c *gin.Context) {
-	// เปิดการเชื่อมต่อฐานข้อมูล
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp")
-	if err != nil {
-		log.Printf("ไม่สามารถเชื่อมต่อฐานข้อมูล: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "การเชื่อมต่อฐานข้อมูลล้มเหลว"})
-		return
-	}
-	defer db.Close()
+func (p *ProductController) Login(c *gin.Context) {
 
 	// ตรวจสอบการเชื่อมต่อฐานข้อมูล
-	if err := db.Ping(); err != nil {
+	if err := p.dbClient.Ping(); err != nil {
 		log.Printf("การเชื่อมต่อฐานข้อมูลล้มเหลว: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "การเชื่อมต่อฐานข้อมูลล้มเหลว"})
 		return
@@ -73,13 +75,14 @@ func Login(c *gin.Context) {
 
 	var (
 		hashedPassword string
+		username       string
 		role           string
 		userID         int
 	)
 
 	// ดึงข้อมูล hashed password และ role จากฐานข้อมูล
-	query := "SELECT password, role,user_id FROM users WHERE BINARY username = ?"
-	err = db.QueryRow(query, loginData.Username).Scan(&hashedPassword, &role, &userID)
+	query := "SELECT password, role,user_id, username FROM users WHERE BINARY username = ?"
+	err := p.dbClient.QueryRow(query, loginData.Username).Scan(&hashedPassword, &role, &userID, &username)
 	if err != nil {
 		log.Printf("ไม่พบชื่อผู้ใช้: %s - %v", loginData.Username, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
@@ -103,10 +106,11 @@ func Login(c *gin.Context) {
 
 	// ส่งผลลัพธ์กลับไป
 	c.JSON(http.StatusOK, gin.H{
-		"message": "เข้าสู่ระบบสำเร็จ",
-		"role":    role,
-		"token":   token,
-		"userID":  userID,
+		"message":  "เข้าสู่ระบบสำเร็จ",
+		"role":     role,
+		"token":    token,
+		"userID":   userID,
+		"username": username,
 	})
 
 	fmt.Printf("ผู้ใช้ %s เข้าสู่ระบบด้วยสิทธิ์: %s\n", loginData.Username, role)

@@ -17,25 +17,35 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.role});
 
   @override
+  // ignore: library_private_types_in_public_api
   _LoginPageState createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
   late Future<List<Product>> productsFuture;
   String? role;
+  String? username;
+  int? quantity;
 
   @override
   void initState() {
     super.initState();
     productsFuture = fetchProductsFromApi();
+    fetchUserName();
+    fetchProductsFromApi();
+  }
+
+  Future<void> fetchUserName() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? usernameNew = prefs.getString('username');
+    setState(() {
+      username = usernameNew;
+    });
   }
 
   Future<List<Product>> fetchProductsFromApi() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? roleNew = prefs.getString('role');
-    setState(() {
-      role = roleNew;
-    });
 
     const String apiUrl =
         "https://hfm99nd8-7070.asse.devtunnels.ms/showproducts";
@@ -45,6 +55,17 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        print("=====================================");
+        print(data);
+        print("=====================================");
+
+        List<Product> products =
+            data.map((item) => Product.fromJson(item)).toList();
+        quantity = products.map((e) => e.stock).reduce((a, b) => a + b);
+        setState(() {
+          role = roleNew;
+          quantity = quantity;
+        });
         return data.map((item) => Product.fromJson(item)).toList();
       } else {
         throw Exception("ไม่สามารถดึงข้อมูลสินค้าได้");
@@ -56,6 +77,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> scanBarcode() async {
     try {
+      // เรียกสแกนบาร์โค้ด
       var result = await BarcodeScanner.scan();
       if (result.rawContent.isNotEmpty) {
         // แสดงข้อความแจ้งระหว่างรอการตอบกลับจากเซิร์ฟเวอร์
@@ -98,6 +120,8 @@ class _LoginPageState extends State<LoginPage> {
                     TextButton(
                       onPressed: () {
                         Navigator.of(context).pop();
+                        // เรียกการสแกนใหม่อีกครั้ง
+                        scanBarcode();
                       },
                       child: const Text('ตกลง'),
                     ),
@@ -117,6 +141,8 @@ class _LoginPageState extends State<LoginPage> {
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
+                      // เรียกการสแกนใหม่อีกครั้ง
+                      scanBarcode();
                     },
                     child: const Text('ตกลง'),
                   ),
@@ -138,6 +164,8 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
+                  // เรียกการสแกนใหม่อีกครั้ง
+                  scanBarcode();
                 },
                 child: const Text('ตกลง'),
               ),
@@ -150,18 +178,18 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    int availableStock = 100;
+    // int availableStock = 100;
     int damagedStock = 5;
 
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
-              'ระบบจัดการสินค้า',
+            Image.asset('assets/PNG/LOGO.png', height: 40, width: 40),
+            Text(
+              'ระบบจัดการวัสดุ',
               style: TextStyle(color: Colors.white),
             ),
-            Image.asset('assets/PNG/LOGO.png', height: 40, width: 40),
           ],
         ),
         backgroundColor: const Color.fromARGB(255, 255, 0, 0),
@@ -197,11 +225,55 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 10),
-                _buildSquareBoxWithText(
-                  context,
-                  'สวัสดีคุณ Besttoo',
-                  'สินค้าคงเหลือ: $availableStock ชิ้น\nสินค้าเสียหาย: $damagedStock ชิ้น',
-                  AddProductPage(),
+                Container(
+                  width: 100,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromARGB(255, 245, 245, 241),
+                        Color.fromARGB(255, 245, 245, 241),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(30.0),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'สวัสดีคุณ $username',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Color.fromARGB(255, 34, 31, 31),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'สินค้าคงเหลือ: $quantity ชิ้น\nสินค้าเสียหาย: $damagedStock ชิ้น',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color.fromARGB(255, 34, 31, 31),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 _buildCategorySection(),
@@ -229,8 +301,8 @@ class _LoginPageState extends State<LoginPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: scanBarcode,
-        child: const Icon(Icons.center_focus_weak),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        child: const Icon(Icons.center_focus_weak, color: Colors.white),
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
       ),
     );
   }
@@ -244,7 +316,7 @@ class _LoginPageState extends State<LoginPage> {
           style: TextStyle(
               fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -261,34 +333,28 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  if (role == '1')
+                  if (role == '2' || role == '1')
                     _buildCategoryButton(
                       context,
                       'assets/PNG/box.png',
-                      'สินค้า',
+                      'วัสดุสำนักงาน',
                       ProductListPage(),
+                    ),
+                  if (role == '1')
+                    _buildCategoryButton(
+                      context,
+                      'assets/PNG/new-product.png',
+                      'เพิ่มวัสดุใหม่',
+                      AddProductPage(),
                     ),
                   if (role == '2' || role == '1')
                     _buildCategoryButton(
                       context,
-                      'assets/PNG/new-product.png',
-                      'เพิ่มเข้าใหม่',
-                      AddProductPage(),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  if (role == '3' || role == '1')
-                    _buildCategoryButton(
-                      context,
                       'assets/PNG/out-of-stock.png',
-                      'จองสินค้า',
+                      'จองวัสดุ',
                       ProductProvider(),
                     ),
-                  if (role == '1')
+                  if (role == '2' || role == '1')
                     _buildCategoryButton(
                       context,
                       'assets/PNG/file.png',

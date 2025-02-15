@@ -4,29 +4,19 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"time"
+	// "time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
+type ProductController struct {
+	dbClient *sql.DB
+}
 
-// getDBConnection - ฟังก์ชันสำหรับเชื่อมต่อกับฐานข้อมูล
-func getDBConnection() (*sql.DB, error) {
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s")
-	if err != nil {
-		return nil, err
+func Newlogin(dbClient *sql.DB) *ProductController {
+	return &ProductController{
+		dbClient: dbClient,
 	}
-
-	// การตั้งค่า connection pool
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
-
-	// ตรวจสอบการเชื่อมต่อ
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-	return db, nil
 }
 
 // Product - โครงสร้างข้อมูลสินค้า
@@ -42,16 +32,9 @@ type Product struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-func Showproducts(c *gin.Context) {
+func (p *ProductController)Showproducts(c *gin.Context) {
 
-	db, err := getDBConnection()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
-	rows, err := db.Query(`
+	rows, err := p.dbClient.Query(`
 		SELECT product_id, product_name, category, quantity, barcode, stock_status, image_path, created_at 
 		FROM products
 		ORDER BY created_at DESC`)

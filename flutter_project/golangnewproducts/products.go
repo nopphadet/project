@@ -5,7 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
+
+	// "time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -18,42 +19,25 @@ import (
 
 // }
 
-func getDBConnection() (*sql.DB, error) {
+type ProductController struct {
+	dbClient *sql.DB
+}
 
-	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/myapp?timeout=30s")
-	if err != nil {
-		return nil, err
+func NewProduct(dbClient *sql.DB) *ProductController {
+	return &ProductController{
+		dbClient: dbClient,
 	}
-
-	// ปรับการตั้งค่า connection pool
-	db.SetMaxOpenConns(10)                  // กำหนดจำนวนการเชื่อมต่อสูงสุด
-	db.SetMaxIdleConns(5)                   // กำหนดจำนวนการเชื่อมต่อที่ไม่ได้ใช้งาน
-	db.SetConnMaxLifetime(30 * time.Minute) // กำหนดเวลาชีวิตสูงสุดของการเชื่อมต่อ
-
-	// ตรวจสอบการเชื่อมต่อ
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-	return db, nil
 }
 
 // API เพิ่มสินค้า
-func Product(c *gin.Context) {
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
+func (p *ProductController) Product(c *gin.Context) {
 	type Product struct {
-		ProductId   string `json:"product_id" binding:"required"`
-		ProductName string `json:"product_name" binding:"required"`
-		Category    string `json:"category" binding:"required"`
-		Quantity    int    `json:"quantity" binding:"required"`
-		Barcode     string `json:"barcode" binding:"required"`
-		StockStatus string `json:"stock_status" binding:"required"`
+		ProductNumber int `json:"product_id" binding:"required"`
+		ProductName   string `json:"product_name" binding:"required"`
+		Category      string `json:"category" binding:"required"`
+		Quantity      int    `json:"quantity" binding:"required"`
+		Barcode       string `json:"barcode" binding:"required"`
+		StockStatus   string `json:"stock_status" binding:"required"`
 	}
 
 	// ดึงข้อมูลจาก form
@@ -64,17 +48,18 @@ func Product(c *gin.Context) {
 		return
 	}
 
+	product_id := 0
 	product := Product{
-		ProductId:   c.DefaultPostForm("product_id", ""),
-		ProductName: c.DefaultPostForm("product_name", ""),
-		Category:    c.DefaultPostForm("category", ""),
-		Quantity:    quantity,
-		Barcode:     c.DefaultPostForm("barcode", ""),
-		StockStatus: c.DefaultPostForm("stock_status", ""),
+		ProductNumber: product_id,
+		ProductName:   c.DefaultPostForm("product_name", ""),
+		Category:      c.DefaultPostForm("category", ""),
+		Quantity:      quantity,
+		Barcode:       c.DefaultPostForm("barcode", ""),
+		StockStatus:   c.DefaultPostForm("stock_status", ""),
 	}
 
 	// ตรวจสอบฟิลด์บังคับ
-	if product.ProductId == "" || product.ProductName == "" || product.Category == "" ||
+	if product.ProductName == "" || product.Category == "" ||
 		product.Barcode == "" || product.StockStatus == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "กรุณากรอกข้อมูลให้ครบถ้วน"})
 		return
@@ -97,7 +82,7 @@ func Product(c *gin.Context) {
 		INSERT INTO products (product_id, product_name, category, quantity, barcode, stock_status, image_path, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
 
-	_, err = db.Exec(query, product.ProductId, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, imagePath)
+	_, err = p.dbClient.Exec(query, product.ProductNumber, product.ProductName, product.Category, product.Quantity, product.Barcode, product.StockStatus, imagePath)
 	if err != nil {
 		log.Printf("Error inserting product: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มสินค้าได้"})
@@ -106,9 +91,10 @@ func Product(c *gin.Context) {
 
 	// เก็บประวัติการเพิ่มสินค้า
 	changeQuery := `
-		INSERT INTO product_changes (product_id, change_type, new_quantity, changed_by)
-		VALUES (LAST_INSERT_ID(), 'ADD', ?, ?)`
-	_, err = db.Exec(changeQuery, product.Quantity, "admin") // เปลี่ยน "admin" เป็นชื่อผู้ที่ทำการเพิ่ม
+    INSERT INTO product_changes (prod_id, change_type, new_quantity, changed_by)
+    VALUES (LAST_INSERT_ID(), 'ADD', ?, ?)`
+
+	_, err = p.dbClient.Exec(changeQuery, product.Quantity, "admin") // เปลี่ยน "admin" เป็นชื่อผู้ที่ทำการเพิ่ม
 	if err != nil {
 		log.Printf("Error logging product change: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถบันทึกการเปลี่ยนแปลง"})
@@ -125,7 +111,7 @@ type Product1 struct {
 }
 
 // UpdateProduct handles updating product quantity
-func UpdateProduct(c *gin.Context) {
+func (p *ProductController) UpdateProduct(c *gin.Context) {
 	var requestData struct {
 		Barcode  string `json:"barcode"`
 		Quantity int    `json:"quantity"`
@@ -144,17 +130,9 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	db, err := getDBConnection()
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
-		return
-	}
-	defer db.Close()
-
 	// ตรวจสอบว่าสินค้ามีอยู่ในฐานข้อมูลหรือไม่
 	var product Product1
-	err = db.QueryRow("SELECT product_id, product_name, quantity FROM products WHERE barcode = ?", requestData.Barcode).
+	err := p.dbClient.QueryRow("SELECT product_id, product_name, quantity FROM products WHERE barcode = ?", requestData.Barcode).
 		Scan(&product.ProductNumber, &product.ProductName, &product.Quantity)
 
 	if err == sql.ErrNoRows {
@@ -168,7 +146,7 @@ func UpdateProduct(c *gin.Context) {
 	}
 
 	// บันทึกการเปลี่ยนแปลงลงในตาราง product_changes
-	_, err = db.Exec(`
+	_, err = p.dbClient.Exec(`
 		INSERT INTO product_changes (product_id, change_type, old_quantity, new_quantity, changed_by, created_at)
 		VALUES (?, 'UPDATE', ?, ?, ?, CURRENT_TIMESTAMP)`,
 		product.ProductNumber, product.Quantity, requestData.Quantity, "admin") // ใช้ "admin" แทนชื่อผู้ที่ทำการอัปเดตหรือดึงจาก JWT หรือการล็อกอิน
@@ -180,7 +158,7 @@ func UpdateProduct(c *gin.Context) {
 	}
 
 	// อัปเดตจำนวนสินค้าในฐานข้อมูล
-	_, err = db.Exec("UPDATE products SET quantity = ? WHERE barcode = ?", requestData.Quantity, requestData.Barcode)
+	_, err = p.dbClient.Exec("UPDATE products SET quantity = ? WHERE barcode = ?", requestData.Quantity, requestData.Barcode)
 	if err != nil {
 		log.Printf("Error updating product quantity: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating product"})
@@ -198,7 +176,7 @@ func UpdateProduct(c *gin.Context) {
 }
 
 // GetProduct handles fetching product details by barcode
-func GetProduct(c *gin.Context) {
+func (p *ProductController) GetProduct(c *gin.Context) {
 	type Product1 struct {
 		ProductNumber string `json:"product_id"`
 		ProductName   string `json:"product_name"`
@@ -211,14 +189,8 @@ func GetProduct(c *gin.Context) {
 		return
 	}
 
-	db, err := getDBConnection()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection error"})
-		return
-	}
-
 	var product Product1
-	err = db.QueryRow("SELECT product_id, product_name, quantity FROM products WHERE barcode = ?", barcode).
+	err := p.dbClient.QueryRow("SELECT product_id, product_name, quantity FROM products WHERE barcode = ?", barcode).
 		Scan(&product.ProductNumber, &product.ProductName, &product.Quantity)
 
 	if err == sql.ErrNoRows {
@@ -235,16 +207,9 @@ func GetProduct(c *gin.Context) {
 }
 
 // ดึงประวัติการเปลี่ยนแปลงสินค้าจากฐานข้อมูล
-func GetProductChangeHistory(c *gin.Context) {
+func (p *ProductController) GetProductChangeHistory(c *gin.Context) {
 
-	db, err := getDBConnection()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้"})
-		return
-	}
-	defer db.Close()
-
-	rows, err := db.Query(`
+	rows, err := p.dbClient.Query(`
 		SELECT ProductName, product_id, change_type, old_quantity, new_quantity, changed_by, created_at 
 		FROM product_changes
 		ORDER BY created_at DESC`)
@@ -314,15 +279,8 @@ func getIntValue(input sql.NullInt32) int {
 }
 
 // ฟังก์ชันสำหรับการสแกนบาร์โค้ดเพื่อเพิ่มสินค้า
-func HandleScanBarcode(c *gin.Context) {
-	
-	db, err := getDBConnection()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
+func (p *ProductController) HandleScanBarcode(c *gin.Context) {
 
-	
 	type Request struct {
 		Barcode string `json:"barcode"`
 	}
@@ -337,8 +295,7 @@ func HandleScanBarcode(c *gin.Context) {
 	var quantity int
 	var productID int
 
-	
-	err = db.QueryRow("SELECT product_id, quantity FROM products WHERE barcode = ?", barcode).Scan(&productID, &quantity)
+	err := p.dbClient.QueryRow("SELECT product_id, quantity FROM products WHERE barcode = ?", barcode).Scan(&productID, &quantity)
 	if err == sql.ErrNoRows {
 		// สินค้าไม่พบในระบบ ไม่เก็บข้อมูลลงฐานข้อมูล
 		c.JSON(http.StatusOK, gin.H{
@@ -351,9 +308,8 @@ func HandleScanBarcode(c *gin.Context) {
 		return
 	}
 
-	
 	newQuantity := quantity + 1
-	_, err = db.Exec("UPDATE products SET quantity = ? WHERE product_id = ?", newQuantity, productID)
+	_, err = p.dbClient.Exec("UPDATE products SET quantity = ? WHERE product_id = ?", newQuantity, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update quantity"})
 		return

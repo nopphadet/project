@@ -45,7 +45,7 @@ class _AddProductPageState extends State<AddProductPage> {
         // ตรวจสอบว่า quantity ถูกต้อง
         if (quantity == null || quantity < 0) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('จำนวนสินค้าต้องเป็นตัวเลขที่ไม่ติดลบ')),
+            SnackBar(content: Text('จำนวนวัสดุต้องเป็นตัวเลขที่ไม่ติดลบ')),
           );
           return;
         }
@@ -90,7 +90,7 @@ class _AddProductPageState extends State<AddProductPage> {
             builder: (context) => AlertDialog(
               title: Text('เพิ่มสำเร็จ',
                   style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Text('สินค้าเพิ่มเรียบร้อย!'),
+              content: Text('วัสดุเพิ่มเรียบร้อย!'),
               actions: [
                 TextButton(
                   child: Text('ตกลง'),
@@ -175,7 +175,7 @@ class _AddProductPageState extends State<AddProductPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('เพิ่มสินค้า'),
+        title: Text('เพิ่มวัสดุใหม่', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color.fromARGB(255, 250, 2, 2),
       ),
       body: SingleChildScrollView(
@@ -197,12 +197,12 @@ class _AddProductPageState extends State<AddProductPage> {
               SizedBox(height: 25),
               _buildTextFormField(
                 controller: _productNumberController,
-                label: 'รหัสสินค้า',
+                label: 'รหัสวัสดุ',
                 icon: Icons.code,
                 keyboardType: TextInputType.text,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'โปรดใส่รหัสสินค้า';
+                    return 'โปรดใส่รหัสวัสดุ';
                   }
                   return null;
                 },
@@ -210,12 +210,12 @@ class _AddProductPageState extends State<AddProductPage> {
               SizedBox(height: 19),
               _buildTextFormField(
                 controller: _productNameController,
-                label: 'ชื่อสินค้า',
+                label: 'ชื่อวัสดุ',
                 icon: Icons.production_quantity_limits,
                 keyboardType: TextInputType.text,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'โปรดใส่ชื่อสินค้า';
+                    return 'โปรดใส่ชื่อวัสดุ';
                   }
                   return null;
                 },
@@ -283,7 +283,7 @@ class _AddProductPageState extends State<AddProductPage> {
               SizedBox(height: 16),
               TextFormField(
                 decoration: InputDecoration(
-                  labelText: 'หมายเลขบาร์โค้ดสินค้า',
+                  labelText: 'หมายเลขบาร์โค้ดวัสดุ',
                   border: OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(Icons.qr_code_scanner,
@@ -306,7 +306,7 @@ class _AddProductPageState extends State<AddProductPage> {
                         BorderSide(color: const Color.fromARGB(255, 255, 0, 0)),
                   ),
                 ),
-                items: ['ใช้งานได้', 'สินค้าเสีย'].map((String value) {
+                items: ['ใช้งานได้', 'วัสดุเสียหาย'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
@@ -322,7 +322,7 @@ class _AddProductPageState extends State<AddProductPage> {
               ElevatedButton(
                 onPressed: _addProduct,
                 child: Text(
-                  'เพิ่มสินค้า',
+                  'เพิ่มวัสดุ',
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -332,9 +332,9 @@ class _AddProductPageState extends State<AddProductPage> {
                   backgroundColor: const Color.fromARGB(255, 255, 0, 0),
                   padding: EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(5),
                   ),
-                  elevation: 5,
+                  elevation: 10,
                 ),
               ),
             ],
