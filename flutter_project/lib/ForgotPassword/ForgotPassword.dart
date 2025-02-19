@@ -9,7 +9,10 @@ class ContactAdmin extends StatelessWidget {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF4A148C), Color(0xFF880E4F)],
+            colors: [
+              Color.fromARGB(255, 255, 255, 255),
+              Color.fromARGB(255, 255, 255, 255)
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -39,8 +42,8 @@ class ContactAdmin extends StatelessWidget {
             const Text(
               'ติดต่อแอดมินกรุณาแตะที่รูปภาพ LINE',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,

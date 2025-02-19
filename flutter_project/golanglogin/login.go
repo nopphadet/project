@@ -1,6 +1,7 @@
 package login
 
 import (
+	//"crypto/sha1"
 	"database/sql"
 	"fmt"
 	"log"
@@ -8,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	//"encoding/hex"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -25,6 +28,33 @@ func Newlogin(dbClient *sql.DB) *ProductController {
 	}
 }
 
+
+//ฟังก์ชันสำหรับแปลง Token ให้เป็น SHA1
+/*func (p *ProductController) convertTokentosha1(token string) string {
+
+	hasher := sha1.New()
+	hasher.Write([]byte(token))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+func (p *ProductController) converttosha1 (c *gin.Context) {
+	 var token string
+	 err:= p.dbClient.QueryRow("SELECT token FROM users WHERE user_id=? ",1).Scan(&token)
+	 if err != nil {
+		 log.Fatal(err)
+	 }
+	 sha1token := p.convertTokentosha1(token)
+
+	 _, err = p.dbClient.Exec("UPDATE users SET token=? WHERE user_id=?", sha1token, 1)
+	 if err != nil {
+		 log.Fatal(err)
+	 }
+	 fmt.Println("Token updated to sha1", sha1token)
+	}
+// func inValidToken (inputToken, storedHash string) bool {
+// 		return convertTokentosha1(inputToken) == storedHash
+// }*/
+
+
 // ฟังก์ชันสำหรับสร้าง JWT Token
 func generateToken(username, role string) (string, error) {
 	secretKey := os.Getenv("JWT_SECRET") // ใช้ environment variable สำหรับความปลอดภัย
@@ -40,6 +70,8 @@ func generateToken(username, role string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secretKey))
+
+	
 }
 
 // ฟังก์ชัน Login

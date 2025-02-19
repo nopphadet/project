@@ -1,4 +1,5 @@
 import 'package:barcode_scan2/barcode_scan2.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_project/ProductProvider/ProductProvider.dart';
@@ -24,8 +25,28 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   late Future<List<Product>> productsFuture;
   String? role;
+  // ignore: unused_field
+  bool _isLoading = false;
   String? username;
   int? quantity;
+
+ final TextEditingController _searchController = TextEditingController();
+  final String baseURL =
+      'https://hfm99nd8-7070.asse.devtunnels.ms/ProductProvider';
+
+  List<Map<String, dynamic>> _products = [];
+
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // void _showSnackBar(String message) {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(content: Text(message)),
+  //   );
+  // }
 
   @override
   void initState() {
@@ -33,6 +54,120 @@ class _LoginPageState extends State<LoginPage> {
     productsFuture = fetchProductsFromApi();
     fetchUserName();
     fetchProductsFromApi();
+  }
+
+  Future<void> _fetchProductData(String searchText) async {
+    if (searchText.isEmpty) {
+      _showSnackBar('กรุณาป้อนชื่อวัสดุที่ต้องการค้นหา');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final url = Uri.parse('$baseURL/search?name=$searchText');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data is List) {
+          setState(() {
+            _products = List<Map<String, dynamic>>.from(data);
+          });
+        } else {
+          _showSnackBar('ไม่พบข้อมูลสินค้า');
+          setState(() => _products.clear());
+        }
+      } else {
+        _showSnackBar('ข้อผิดพลาดจากเซิร์ฟเวอร์: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _reserveProduct(int productId, int quantity) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userID"); // Replace with actual user ID
+    final url = Uri.parse('$baseURL/reserve');
+
+    try {
+      final response = await http.post(url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'user_id': userId,
+            'product_id': productId,
+            'quantity': quantity,
+          }));
+
+      if (response.statusCode == 200) {
+        _showSnackBar('การจองสินค้าสำเร็จ');
+      } else {
+        _showSnackBar('เกิดข้อผิดพลาดในการจอง');
+      }
+    } catch (e) {
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  Future<void> _confirmReservation(int reservationId) async {
+    final url = Uri.parse('$baseURL/confirm');
+
+    try {
+      final response = await http.post(url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'reservation_id': reservationId,
+          }));
+
+      if (response.statusCode == 200) {
+        _showSnackBar('ยืนยันการจองสำเร็จ');
+      } else {
+        _showSnackBar('เกิดข้อผิดพลาดในการยืนยันการจอง');
+      }
+    } catch (e) {
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  void _showQuantityDialog(int productId) {
+    TextEditingController _quantityController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('เลือกจำนวนสินค้า'),
+        content: TextField(
+          controller: _quantityController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: 'ใส่จำนวน'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              int quantity = int.tryParse(_quantityController.text) ?? 0;
+              if (quantity > 0) {
+                _reserveProduct(productId, quantity);
+              } else {
+                _showSnackBar('กรุณากรอกจำนวนที่ถูกต้อง');
+              }
+            },
+            child: Text('ยืนยัน'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> fetchUserName() async {
@@ -58,7 +193,7 @@ class _LoginPageState extends State<LoginPage> {
         print("=====================================");
         print(data);
         print("=====================================");
-
+        //loop เก็บค่าData มาบวกกัน{stock}
         List<Product> products =
             data.map((item) => Product.fromJson(item)).toList();
         quantity = products.map((e) => e.stock).reduce((a, b) => a + b);
@@ -102,10 +237,19 @@ class _LoginPageState extends State<LoginPage> {
 
           if (data["status"] == "not_found") {
             // ถ้าไม่มีสินค้า ให้ไปหน้า AddProductPage ทันที
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AddProductPage()),
+           Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              AddProductPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
             );
+          },
+        ),
+      );
           } else {
             String message = data["message"];
             String? newQuantity = data["new_quantity"]?.toString();
@@ -175,20 +319,25 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
   }
+ 
 
   @override
   Widget build(BuildContext context) {
     // int availableStock = 100;
     int damagedStock = 5;
-
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
             Image.asset('assets/PNG/LOGO.png', height: 40, width: 40),
             Text(
-              'ระบบจัดการวัสดุ',
-              style: TextStyle(color: Colors.white),
+              'Stock MIS',
+              // style: TextStyle(color: Colors.white),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              )
             ),
           ],
         ),
@@ -207,8 +356,9 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
+      
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
               Color.fromARGB(255, 255, 255, 255),
@@ -224,14 +374,14 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 90),
                 Container(
                   width: 100,
                   height: 150,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
-                        Color.fromARGB(255, 245, 245, 241),
+                        Color.fromARGB(255, 255, 255, 255),
                         Color.fromARGB(255, 245, 245, 241),
                       ],
                       begin: Alignment.topLeft,
@@ -246,6 +396,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
+                  
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20.0, vertical: 20.0),
@@ -275,6 +426,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
+                
                 const SizedBox(height: 20),
                 _buildCategorySection(),
                 const SizedBox(height: 20),
@@ -303,6 +455,19 @@ class _LoginPageState extends State<LoginPage> {
         onPressed: scanBarcode,
         child: const Icon(Icons.center_focus_weak, color: Colors.white),
         backgroundColor: Color.fromARGB(255, 255, 0, 0),
+      ),
+    );
+  }
+Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        labelText: 'ค้นหาวัสดุ',
+        border: OutlineInputBorder(),
+        suffixIcon: IconButton(
+          icon: Icon(Icons.search),
+          onPressed: () => _fetchProductData(_searchController.text.trim()),
+        ),
       ),
     );
   }
@@ -392,6 +557,11 @@ class _LoginPageState extends State<LoginPage> {
       },
     );
   }
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty<TextEditingController>('_searchController', _searchController));
+  }
 }
 
 Widget _buildSquareBoxWithText(
@@ -462,7 +632,15 @@ Widget _buildCategoryButton(
     onTap: () {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => nextPage),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => nextPage,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
       );
     },
     child: Column(
@@ -507,10 +685,17 @@ Widget _buildSquareImageWithDescription(
   return GestureDetector(
     onTap: () {
       // เมื่อคลิกที่สินค้าจะไปยังหน้ารายละเอียดสินค้า
-      Navigator.push(
+     Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => ProductDetailPage(product: product),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              ProductDetailPage(product: product),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
         ),
       );
     },
