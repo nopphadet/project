@@ -1,4 +1,4 @@
-package products
+package products // สำหรับการจัดการสินค้า
 
 import (
 	"database/sql"

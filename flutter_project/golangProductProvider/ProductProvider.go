@@ -1,4 +1,4 @@
-package productProvider
+package productProvider // จองสินค้า และยืนยันการจองสินค้า
 
 import (
 	"database/sql"
@@ -167,10 +167,21 @@ func (p *ProductProviderController) ReserveProduct(c *gin.Context) {
 		return
 	}
 	log.Printf("UserID: %d, ProductID: %d, Quantity: %d", req.UserID, req.ProductID, req.Quantity)
+
+	log.Printf("จองสินค้าเรียบร้อยแล้ว")
+
+	// ลดจำนวนสินค้าในคลังหลังจากจอง
+	_, err = p.dbClient.Exec("UPDATE products SET quantity = quantity - ? WHERE product_id = ?", req.Quantity, req.ProductID)
+	if err != nil {
+		log.Printf("Failed to update product quantity: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตจำนวนสินค้าได้"})
+		return
+	}
+
 }
 
 func (p *ProductProviderController) ConfirmReservation(c *gin.Context) {
-	
+
 	var req struct {
 		ReservationID int `json:"reservation_id"`
 	}

@@ -1,4 +1,4 @@
-package register
+package register // สำหรับการสมัครสมาชิก
 
 import (
 	"database/sql"

@@ -1,4 +1,4 @@
-package showproducts
+package showproducts // แสดงสินค้าทั้งหมด
 
 import (
 	"database/sql"

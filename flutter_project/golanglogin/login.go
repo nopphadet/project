@@ -1,4 +1,4 @@
-package login
+package login // สำหรับการเข้าสู่ระบบ
 
 import (
 	//"crypto/sha1"
@@ -28,7 +28,6 @@ func Newlogin(dbClient *sql.DB) *ProductController {
 	}
 }
 
-
 //ฟังก์ชันสำหรับแปลง Token ให้เป็น SHA1
 /*func (p *ProductController) convertTokentosha1(token string) string {
 
@@ -54,7 +53,6 @@ func (p *ProductController) converttosha1 (c *gin.Context) {
 // 		return convertTokentosha1(inputToken) == storedHash
 // }*/
 
-
 // ฟังก์ชันสำหรับสร้าง JWT Token
 func generateToken(username, role string) (string, error) {
 	secretKey := os.Getenv("JWT_SECRET") // ใช้ environment variable สำหรับความปลอดภัย
@@ -71,7 +69,6 @@ func generateToken(username, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secretKey))
 
-	
 }
 
 // ฟังก์ชัน Login

@@ -22,20 +22,25 @@ class ContactAdmin extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: () async {
-                const lineUrl = "https://line.me/R/ti/p/your_admin_line_id";
-                if (await canLaunchUrl(Uri.parse(lineUrl))) {
-                  await launchUrl(Uri.parse(lineUrl),
-                      mode: LaunchMode.externalApplication);
-                } else {
+                const lineUrl = "https://line.me/ti/p/mp-WHTJnIq";
+                try {
+                  final Uri url = Uri.parse(lineUrl);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("ไม่สามารถเปิดลิงก์ได้")),
+                    );
+                  }
+                } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("ไม่สามารถเปิดลิงก์ได้")),
+                    SnackBar(content: Text("เกิดข้อผิดพลาด: $e")),
                   );
                 }
               },
               child: const CircleAvatar(
                 radius: 80,
-                backgroundImage:
-                    AssetImage('assets/PNG/line.jpg'), // ใส่รูปภาพของคุณที่นี่
+                backgroundImage: AssetImage('assets/PNG/line.jpg'),
               ),
             ),
             const SizedBox(height: 20),
