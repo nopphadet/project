@@ -19,11 +19,9 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       name: json['product_name'] ?? '',
-      stock: int.tryParse(json['quantity'].toString()) ??
-          0, // แปลง String เป็น int
+      stock: int.tryParse(json['quantity'].toString()) ?? 0,
       imageUrl: json['image_url'] ?? '',
-      id: int.tryParse(json['product_id'].toString()) ??
-          0, // แปลง String เป็น int
+      id: int.tryParse(json['product_id'].toString()) ?? 0,
     );
   }
 }
@@ -133,15 +131,30 @@ class ProductDetailPage extends StatefulWidget {
 class _ProductDetailPageState extends State<ProductDetailPage> {
   final String baseURL =
       'https://hfm99nd8-7070.asse.devtunnels.ms/ProductProvider';
+  final String deleteURL =
+      'https://hfm99nd8-7070.asse.devtunnels.ms/products/delete';
   final TextEditingController _quantityController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title:
-              Text(widget.product.name, style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.red),
+        title: Text(
+          widget.product.name,
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.red,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete, color: Colors.white),
+            onPressed: () {
+              print('Deleting product with ID: ${widget.product.id}');
+              _deleteProduct(widget.product.id);
+            },
+            tooltip: 'ลบสินค้า',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -157,7 +170,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
             const SizedBox(height: 18),
             Text('ชื่อสินค้า: ${widget.product.name}',
-                style: TextStyle(fontSize: 10)),
+                style: TextStyle(fontSize: 20)),
             const SizedBox(height: 10),
             Text('สินค้าคงเหลือ: ${widget.product.stock} ชิ้น',
                 style: TextStyle(fontSize: 18)),
@@ -180,6 +193,39 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 
+  Future<void> _deleteProduct(int productId) async {
+    // ตรวจสอบว่า productId มีค่า ถ้า null หรือ 0 ให้จัดการข้อผิดพลาด
+    // ignore: unnecessary_null_comparison
+    if (productId == 0 || productId == null) {
+      _showSnackBar('ไม่พบ ID สินค้าที่ถูกต้อง');
+      return;
+    }
+
+    final url = Uri.parse(deleteURL);
+    try {
+      print('Sending DELETE request to: $url with ID: $productId'); // Debug log
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(
+            {'id': productId}), // ตรวจสอบว่า productId เป็น int และไม่ null
+      );
+
+      print('Response status: ${response.statusCode}'); // Debug log
+      print('Response body: ${response.body}'); // Debug log
+
+      if (response.statusCode == 200) {
+        _showSnackBar('ลบสินค้าสำเร็จ');
+        Navigator.pop(context);
+      } else {
+        _showSnackBar('ไม่สามารถลบสินค้าได้: ${response.body}');
+      }
+    } catch (e) {
+      print('Error during DELETE request: $e'); // Debug log
+      _showSnackBar('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
   Future<void> _reserveProduct(int productId, int quantity) async {
     if (quantity <= 0) {
       _showSnackBar('กรุณากรอกจำนวนที่ถูกต้อง');
@@ -187,7 +233,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString("userID") ?? '0'; // ใช้ user ID จริง ๆ
+    final userId = prefs.getString("userID") ?? '0';
     final url = Uri.parse('$baseURL/reserve');
 
     try {

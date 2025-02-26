@@ -29,10 +29,62 @@ func NewProduct(dbClient *sql.DB) *ProductController {
 	}
 }
 
+// ProductDeleteRequest สร้าง struct เพื่อรับข้อมูลจาก JSON body
+type ProductDeleteRequest struct {
+	ProductID int `json:"id" binding:"required"` // รับค่า product_id จาก JSON body
+}
+
+func NewProductController(db *sql.DB) *ProductController {
+	return &ProductController{dbClient: db}
+}
+
+func (p *ProductController) DeleteProduct(c *gin.Context) {
+	// รับข้อมูลจาก JSON body และ bind กับ struct ProductDeleteRequest
+	var request ProductDeleteRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ข้อมูลไม่ถูกต้อง: " + err.Error(),
+		})
+		return
+	}
+
+	// Debug: พิมพ์ค่า ProductID เพื่อตรวจสอบ
+	println("Received ProductID:", request.ProductID)
+
+	// ลบข้อมูลจากฐานข้อมูล โดยใช้ product_id
+	result, err := p.dbClient.Exec("DELETE FROM products WHERE product_id = ?", request.ProductID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "ไม่สามารถลบข้อมูลได้: " + err.Error(),
+		})
+		return
+	}
+
+	// ตรวจสอบว่ามีแถวที่ถูกลบหรือไม่
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "ไม่สามารถตรวจสอบการลบได้: " + err.Error(),
+		})
+		return
+	}
+
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "ไม่พบสินค้าที่ระบุ ID",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ลบสินค้าสำเร็จ",
+	})
+}
+
 // API เพิ่มสินค้า
 func (p *ProductController) Product(c *gin.Context) {
 	type Product struct {
-		ProductNumber int `json:"product_id" binding:"required"`
+		ProductNumber int    `json:"product_id" binding:"required"`
 		ProductName   string `json:"product_name" binding:"required"`
 		Category      string `json:"category" binding:"required"`
 		Quantity      int    `json:"quantity" binding:"required"`
@@ -77,7 +129,7 @@ func (p *ProductController) Product(c *gin.Context) {
 		return
 	}
 
-	// SQL สำหรับบันทึกข้อมูลสินค้า
+	// เพิ่มข้อมูลสินค้าลงในฐานข้อมูล
 	query := `
 		INSERT INTO products (product_id, product_name, category, quantity, barcode, stock_status, image_path, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
@@ -91,7 +143,7 @@ func (p *ProductController) Product(c *gin.Context) {
 
 	// เก็บประวัติการเพิ่มสินค้า
 	changeQuery := `
-    INSERT INTO product_changes (prod_id, change_type, new_quantity, changed_by)
+    INSERT INTO product_changes (product_id, change_type, new_quantity, changed_by)
     VALUES (LAST_INSERT_ID(), 'ADD', ?, ?)`
 
 	_, err = p.dbClient.Exec(changeQuery, product.Quantity, "admin") // เปลี่ยน "admin" เป็นชื่อผู้ที่ทำการเพิ่ม
@@ -104,14 +156,14 @@ func (p *ProductController) Product(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "เพิ่มสินค้าสำเร็จ"})
 }
 
-type Product1 struct {
-	ProductNumber string `json:"product_id"`
-	ProductName   string `json:"product_name"`
-	Quantity      int    `json:"quantity"`
-}
-
 // UpdateProduct handles updating product quantity
 func (p *ProductController) UpdateProduct(c *gin.Context) {
+
+	type Product1 struct {
+		ProductNumber string `json:"product_id"`
+		ProductName   string `json:"product_name"`
+		Quantity      int    `json:"quantity"`
+	}
 	var requestData struct {
 		Barcode  string `json:"barcode"`
 		Quantity int    `json:"quantity"`

@@ -31,11 +31,14 @@ func Init() {
 	r.PUT("/products/update", Newproduct.UpdateProduct)
 	r.GET("/products", Newproduct.GetProduct)
 	r.POST("/api/scan", Newproduct.HandleScanBarcode)
+	r.POST("/products/delete", Newproduct.DeleteProduct)
+
 
 	Newprovider := productProvider.NewProvider(db)
 	r.GET("/ProductProvider/search", Newprovider.SearchProducts)
 	r.POST("/ProductProvider/reserve", Newprovider.ReserveProduct)
 	r.POST("/ProductProvider/confirm", Newprovider.ConfirmReservation)
+
 
 	Newlogin := login.Newlogin(db)
 	r.POST("/login", Newlogin.Login)

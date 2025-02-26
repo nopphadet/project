@@ -279,10 +279,23 @@ class _LoginPageState extends State<LoginPage> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30.0),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color.fromARGB(71, 255, 0, 0),
-                        blurRadius: 12,
+                        color: Color.fromARGB(50, 255, 64, 64),
+                        blurRadius: 15,
+                        spreadRadius: 2,
+                        offset: Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: Color.fromARGB(40, 255, 0, 0),
+                        blurRadius: 20,
+                        spreadRadius: 1,
+                        offset: Offset(0, 6),
+                      ),
+                      BoxShadow(
+                        color: Color.fromARGB(30, 220, 0, 0),
+                        blurRadius: 25,
+                        spreadRadius: 0,
                         offset: Offset(0, 4),
                       ),
                     ],
@@ -377,11 +390,13 @@ class _LoginPageState extends State<LoginPage> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Color.fromARGB(155, 255, 255, 255),
+            color: Color.fromARGB(255, 255, 255, 255),
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
-                  color: Color.fromARGB(82, 77, 70, 70), blurRadius: 8, offset: Offset(0, 4)),
+                  color: Color.fromARGB(82, 255, 0, 0),
+                  blurRadius: 8,
+                  offset: Offset(0, 4)),
             ],
           ),
           child: Column(
