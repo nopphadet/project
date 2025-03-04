@@ -33,20 +33,38 @@ class ProductListPage extends StatefulWidget {
 
 class _ProductListPageState extends State<ProductListPage> {
   late Future<List<Product>> _productsFuture;
+  String? role;
 
   @override
   void initState() {
     super.initState();
+    _loadRole(); 
     _productsFuture = fetchProductsFromApi();
   }
 
+
+  Future<void> _loadRole() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      role = prefs.getString('role') ?? ''; 
+    });
+  }
+
   Future<List<Product>> fetchProductsFromApi() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? roleNew = prefs.getString('role');
+
     const apiUrl = 'https://hfm99nd8-7070.asse.devtunnels.ms/showproducts';
     try {
       final response = await http.get(Uri.parse(apiUrl));
       if (response.statusCode == 200) {
         final List<dynamic> jsonData = json.decode(response.body);
-        return jsonData.map((json) => Product.fromJson(json)).toList();
+        List<Product> products =
+            jsonData.map((json) => Product.fromJson(json)).toList();
+        setState(() {
+          role = roleNew; // อัพเดท role หลังจากดึงข้อมูล
+        });
+        return products;
       } else {
         throw Exception('ไม่สามารถดึงข้อมูลสินค้าได้');
       }
@@ -59,9 +77,9 @@ class _ProductListPageState extends State<ProductListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title:
-              const Text('รายการวัสดุ', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.red),
+        title: const Text('รายการวัสดุ', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.red,
+      ),
       body: FutureBuilder<List<Product>>(
         future: _productsFuture,
         builder: (context, snapshot) {
@@ -134,6 +152,21 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   final String deleteURL =
       'https://hfm99nd8-7070.asse.devtunnels.ms/products/delete';
   final TextEditingController _quantityController = TextEditingController();
+  String? role;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRole(); 
+  }
+
+
+  Future<void> _loadRole() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      role = prefs.getString('role') ?? ''; // ตั้งค่าเริ่มต้นเป็น '' ถ้าไม่มี
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,14 +178,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ),
         backgroundColor: Colors.red,
         actions: [
-          IconButton(
-            icon: Icon(Icons.delete, color: Colors.white),
-            onPressed: () {
-              print('Deleting product with ID: ${widget.product.id}');
-              _deleteProduct(widget.product.id);
-            },
-            tooltip: 'ลบสินค้า',
-          ),
+          if (role == '1')
+            IconButton(
+              icon: Icon(Icons.delete, color: Colors.white),
+              onPressed: () {
+                print('Deleting product with ID: ${widget.product.id}');
+                _deleteProduct(widget.product.id);
+              },
+              tooltip: 'ลบสินค้า',
+            ),
         ],
       ),
       body: Padding(
@@ -194,7 +228,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   Future<void> _deleteProduct(int productId) async {
-    // ตรวจสอบว่า productId มีค่า ถ้า null หรือ 0 ให้จัดการข้อผิดพลาด
     // ignore: unnecessary_null_comparison
     if (productId == 0 || productId == null) {
       _showSnackBar('ไม่พบ ID สินค้าที่ถูกต้อง');
@@ -203,16 +236,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     final url = Uri.parse(deleteURL);
     try {
-      print('Sending DELETE request to: $url with ID: $productId'); // Debug log
+      print('Sending DELETE request to: $url with ID: $productId');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(
-            {'id': productId}), // ตรวจสอบว่า productId เป็น int และไม่ null
+        body: json.encode({'id': productId}),
       );
 
-      print('Response status: ${response.statusCode}'); // Debug log
-      print('Response body: ${response.body}'); // Debug log
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         _showSnackBar('ลบสินค้าสำเร็จ');
@@ -221,7 +253,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         _showSnackBar('ไม่สามารถลบสินค้าได้: ${response.body}');
       }
     } catch (e) {
-      print('Error during DELETE request: $e'); // Debug log
+      print('Error during DELETE request: $e');
       _showSnackBar('เกิดข้อผิดพลาด: $e');
     }
   }

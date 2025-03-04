@@ -83,7 +83,6 @@ class _ProductProviderState extends State<ProductProvider> {
 
   Future<void> _confirmReservation(int reservationId) async {
     final url = Uri.parse('$baseURL/confirm');
-
     try {
       final response = await http.post(url,
           headers: {

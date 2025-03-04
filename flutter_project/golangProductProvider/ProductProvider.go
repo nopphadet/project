@@ -171,12 +171,12 @@ func (p *ProductProviderController) ReserveProduct(c *gin.Context) {
 	log.Printf("จองสินค้าเรียบร้อยแล้ว")
 
 	// ลดจำนวนสินค้าในคลังหลังจากจอง
-	_, err = p.dbClient.Exec("UPDATE products SET quantity = quantity - ? WHERE product_id = ?", req.Quantity, req.ProductID)
-	if err != nil {
-		log.Printf("Failed to update product quantity: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตจำนวนสินค้าได้"})
-		return
-	}
+	// _, err = p.dbClient.Exec("UPDATE products SET quantity = quantity - ? WHERE product_id = ?", req.Quantity, req.ProductID)
+	// if err != nil {
+	// 	log.Printf("Failed to update product quantity: %v", err)
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตจำนวนสินค้าได้"})
+	// 	return
+	// }
 
 }
 
@@ -217,4 +217,65 @@ func (p *ProductProviderController) ConfirmReservation(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Reservation confirmed successfully"})
+}
+
+func (p *ProductProviderController) GetReservations(c *gin.Context) {
+
+	type Reservation struct {
+		ReserveID        int            `json:"reserve_id"`
+		UserID           string         `json:"user_id"`
+		ProductID        int            `json:"product_id"`
+		Quantity         int            `json:"quantity"`
+		ActualQuantity   int            `json:"actual_quantity"`
+		ReturnedQuantity int            `json:"returned_quantity"`
+		Status           string         `json:"status"`
+		ExpiresAt        sql.NullString `json:"expires_at"`
+		ProductName      string         `json:"product_name"`
+		ImageUrl         string         `json:"image_url"`
+		Createdat        string         `json:"created_at"`
+	}
+	rows, err := p.dbClient.Query(`
+        SELECT r.reserve_id, r.user_id, r.product_id, r.quantity, r.actual_quantity, r.returned_quantity, r.status, r.expires_at,r.created_at,
+               p.product_name, CONCAT('https://hfm99nd8-7070.asse.devtunnels.ms/', p.image_path) as image_url
+        FROM reservations r
+        LEFT JOIN products p ON r.product_id = p.product_id
+        ORDER BY r.reserve_id DESC`)
+	if err != nil {
+		log.Printf("Error fetching reservations: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลการจองได้"})
+		return
+	}
+	defer rows.Close()
+
+	var reservations []Reservation
+	for rows.Next() {
+		var r Reservation
+		var expiresAt sql.NullString // ตัวแปรชั่วคราวสำหรับ expires_at
+		err := rows.Scan(&r.ReserveID, &r.UserID, &r.ProductID, &r.Quantity, &r.ActualQuantity, &r.ReturnedQuantity, &r.Status, &expiresAt,&r.Createdat, &r.ProductName, &r.ImageUrl, )
+		if err != nil {
+			log.Printf("Error scanning reservation: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการอ่านข้อมูล"})
+			return
+		}
+		// แปลง sql.NullString เป็น string โดยใช้ค่าเริ่มต้นถ้า NULL
+		if expiresAt.Valid {
+			r.ExpiresAt = expiresAt
+		} else {
+			r.ExpiresAt = sql.NullString{String: "", Valid: false} // หรือกำหนดค่าเริ่มต้นที่ต้องการ
+		}
+		reservations = append(reservations, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("Rows error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการประมวลผลข้อมูล"})
+		return
+	}
+
+	if len(reservations) == 0 {
+		c.JSON(http.StatusOK, gin.H{"data": []Reservation{}, "message": "ไม่มีข้อมูลการจองในระบบ"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": reservations})
 }

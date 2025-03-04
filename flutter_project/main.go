@@ -33,12 +33,11 @@ func Init() {
 	r.POST("/api/scan", Newproduct.HandleScanBarcode)
 	r.POST("/products/delete", Newproduct.DeleteProduct)
 
-
 	Newprovider := productProvider.NewProvider(db)
 	r.GET("/ProductProvider/search", Newprovider.SearchProducts)
 	r.POST("/ProductProvider/reserve", Newprovider.ReserveProduct)
 	r.POST("/ProductProvider/confirm", Newprovider.ConfirmReservation)
-
+	r.GET("/ProductProvider/reservations", Newprovider.GetReservations)
 
 	Newlogin := login.Newlogin(db)
 	r.POST("/login", Newlogin.Login)
