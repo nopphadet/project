@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_project/ForgotPassword/ForgotPassword.dart';
 // import 'package:flutter_project/HomePage/homePage.dart';
-import 'package:flutter_project/testnew.dart';
+import 'package:flutter_project/HOMEPAGE.dart';
 // import 'package:flutter_project/register/register.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
 class Login extends StatelessWidget {
   final TextEditingController usernameController = TextEditingController();
@@ -145,30 +146,59 @@ class Login extends StatelessWidget {
                   TextField(
                     controller: usernameController,
                     decoration: InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: const Icon(Icons.person),
+                      hintText: 'Username',
+                      prefixIcon:
+                          Icon(Icons.person, color: Colors.red[700], size: 24),
                       filled: true,
-                      fillColor: const Color.fromARGB(255, 255, 255, 255),
+                      fillColor: Color.fromARGB(255, 245, 245, 245),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius:
+                            BorderRadius.circular(30), // เพิ่มความโค้งมน
                         borderSide: BorderSide.none,
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide:
+                            BorderSide(color: Colors.grey[300]!, width: 1.0),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide:
+                            BorderSide(color: Colors.red[700]!, width: 2.0),
+                      ),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                     ),
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
                   ),
                   const SizedBox(height: 15),
                   TextField(
                     controller: passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock),
+                      hintText: 'Password',
+                      prefixIcon:
+                          Icon(Icons.lock, color: Colors.red[700], size: 24),
                       filled: true,
-                      fillColor: const Color.fromARGB(255, 255, 255, 255),
+                      fillColor: Color.fromARGB(255, 245, 245, 245),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide:
+                            BorderSide(color: Colors.grey[300]!, width: 1.0),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide:
+                            BorderSide(color: Colors.red[700]!, width: 2.0),
+                      ),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                     ),
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
                   ),
                   const Text(
                     "คุณลืมบัญชีใช่ไหม",

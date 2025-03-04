@@ -544,8 +544,7 @@ class _HomePage1State extends State<HomePage1>
             fontFamily: 'ThaiSans',
             shadows: [
               Shadow(
-                  color: const Color.fromARGB(255, 234, 128, 128) ??
-                      const Color.fromARGB(255, 212, 0, 0),
+                  color: const Color.fromARGB(255, 234, 128, 128),
                   offset: Offset(2, 2),
                   blurRadius: 4)
             ],
