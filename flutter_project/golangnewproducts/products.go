@@ -143,7 +143,7 @@ func (p *ProductController) Product(c *gin.Context) {
 
 	// เก็บประวัติการเพิ่มสินค้า
 	changeQuery := `
-    INSERT INTO product_changes (product_id, change_type, new_quantity, changed_by)
+    INSERT INTO product_changes (changes_id, change_type, new_quantity, changed_by)
     VALUES (LAST_INSERT_ID(), 'ADD', ?, ?)`
 
 	_, err = p.dbClient.Exec(changeQuery, product.Quantity, "admin") // เปลี่ยน "admin" เป็นชื่อผู้ที่ทำการเพิ่ม

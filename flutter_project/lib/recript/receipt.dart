@@ -166,8 +166,9 @@ class _ReciptState extends State<Recipt> {
     // Map สำหรับแปลง status เป็นภาษาไทย
     final Map<String, String> statusMap = {
       'pending': 'รอดำเนินการ',
-      'confirmed': 'ยืนยันแล้ว',
-      'returned': 'คืนแล้ว',
+      'confirmed': 'อนุมัติ',
+      'returned': 'คืนสำเร็จ',
+      'cancelled': 'ไม่อนุมัติ',
     };
 
     // ใช้ statusMap เพื่อแปลง status เป็นภาษาไทย ถ้าไม่มีให้ใช้ค่าต้นฉบับ
@@ -317,8 +318,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         final reservation = reservations[index];
                         final Map<String, String> statusMap = {
                           'pending': 'รอดำเนินการ',
-                          'confirmed': 'ยืนยันแล้ว',
-                          'returned': 'คืนแล้ว',
+                          'confirmed': 'อนุมัติ',
+                          'returned': 'คืนสำเร็จ',
+                          'cancelled': 'ไม่อนุมัติ',
                         };
                         final thaiStatus =
                             statusMap[reservation.status.toLowerCase()] ??

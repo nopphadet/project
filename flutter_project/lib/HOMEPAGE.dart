@@ -550,7 +550,7 @@ class _LoginPageState extends State<LoginPage> {
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 10,
-          mainAxisSpacing: 20,
+          mainAxisSpacing: 10,
         ),
         itemCount: uniqueProducts.length,
         itemBuilder: (context, index) {
@@ -569,7 +569,7 @@ class _LoginPageState extends State<LoginPage> {
 
 Widget _buildSquareBoxWithText(
     BuildContext context, String text, String description, Widget nextPage,
-    {double width = 100, double height = 150}) {
+    {double width = 100, double height = 100}) {
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -684,7 +684,7 @@ Widget _buildCategoryButton(
 
 Widget _buildSquareImageWithDescription(
     BuildContext context, String imagePath, String description, Product product,
-    {double width = 150, double height = 130, bool withBorder = false}) {
+    {double width = 130, double height = 100, bool withBorder = false}) {
   return GestureDetector(
     onTap: () {
       Navigator.push(

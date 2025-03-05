@@ -7,14 +7,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 
 class Login extends StatelessWidget {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final storage = const FlutterSecureStorage(); // Secure storage for token
+  final storage = const FlutterSecureStorage();
 
-  // ฟังก์ชันสำหรับล็อกอิน
   Future<void> login(BuildContext context) async {
     final String username = usernameController.text.trim();
     final String password = passwordController.text.trim();
