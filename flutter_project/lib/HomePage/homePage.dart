@@ -517,13 +517,13 @@ class _HomePage1State extends State<HomePage1>
                     'วัสดุสำนักงาน', ProductListPage()),
               if (role == '1')
                 _buildCategoryButton(context, 'assets/PNG/new-product.png',
-                    'เพิ่มวัสดุใหม่', AddProductPage()),
+                    'เพิ่มวัสดุ', AddProductPage()),
               if (role == '2' || role == '1')
                 _buildCategoryButton(context, 'assets/PNG/out-of-stock.png',
                     'จองวัสดุ', ProductProvider()),
               if (role == '2' || role == '1')
                 _buildCategoryButton(
-                    context, 'assets/PNG/file.png', 'รายการจอง-คืน', Recipt()),
+                    context, 'assets/PNG/file.png', 'จอง-คืน', Recipt()),
             ],
           ),
         ),

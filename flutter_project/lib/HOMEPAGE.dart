@@ -515,7 +515,7 @@ class _LoginPageState extends State<LoginPage> {
                     _buildCategoryButton(
                       context,
                       'assets/PNG/new-product.png',
-                      'เพิ่มวัสดุใหม่',
+                      'เพิ่มวัสดุ',
                       AddProductPage(),
                     ),
                   if (role == '2' || role == '1')
@@ -529,7 +529,7 @@ class _LoginPageState extends State<LoginPage> {
                     _buildCategoryButton(
                       context,
                       'assets/PNG/file.png',
-                      'รายการจอง-คืน',
+                      'จอง-คืน',
                       Recipt(),
                     ),
                 ],
