@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:barcode_scan2/barcode_scan2.dart';
-// ignore: unused_import
-import 'package:flutter_project/recript/receipt.dart' as receipt;
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -12,9 +10,6 @@ import 'package:flutter_project/AddProductPage/AddProduct.dart';
 import 'package:flutter_project/Product/product.dart';
 import 'package:flutter_project/login/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_project/Product/product.dart'
-    show Product, ProductDetailPage, ProductListPage;
-
 import '../recript/receipt.dart';
 
 class LoginPage extends StatefulWidget {
@@ -23,17 +18,17 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.role});
 
   @override
-  // ignore: library_private_types_in_public_api
   _LoginPageState createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late Future<List<Product>> productsFuture;
   String? role;
-  // ignore: unused_field
-  bool _isLoading = false; // เปลี่ยนจาก unused_field เป็นใช้งานได้
   String? username;
   int? quantity;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
@@ -41,6 +36,25 @@ class _LoginPageState extends State<LoginPage> {
     print("initState");
     productsFuture = fetchProductsFromApi();
     fetchUserName();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+    _animationController.forward();
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
   void didChangeDependencies() {
     print("didChangeDependencies");
     super.didChangeDependencies();
-    productsFuture = fetchProductsFromApi(); // รีเฟรชเมื่อหน้าแสดงใหม่
+    productsFuture = fetchProductsFromApi();
   }
 
   Future<void> fetchUserName() async {
@@ -86,12 +100,12 @@ class _LoginPageState extends State<LoginPage> {
             data.map((item) => Product.fromJson(item)).toList();
         quantity = products.isNotEmpty
             ? products.map((e) => e.stock).reduce((a, b) => a + b)
-            : 0; // ป้องกันข้อผิดพลาดเมื่อ data ว่าง
+            : 0;
         setState(() {
           role = roleNew;
           quantity = quantity;
         });
-        return products; // ส่งกลับ List<Product> แทน data.map
+        return products;
       } else {
         throw Exception("ไม่สามารถดึงข้อมูลวัสดุได้: ${response.statusCode}");
       }
@@ -107,9 +121,24 @@ class _LoginPageState extends State<LoginPage> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) {
-            return const Center(child: CircularProgressIndicator());
-          },
+          builder: (context) => ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(
+                parent: _animationController,
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 50,
+                height: 50,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  strokeWidth: 5,
+                ),
+              ),
+            ),
+          ),
         );
 
         final response = await http.post(
@@ -126,16 +155,26 @@ class _LoginPageState extends State<LoginPage> {
           if (data["status"] == "not_found") {
             showDialog(
               context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text('วัสดุไม่พบในระบบ'),
-                  content: Text('คุณต้องการสร้างวัสดุใหม่หรือไม่?'),
+              builder: (context) => ScaleTransition(
+                scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                  CurvedAnimation(
+                    parent: _animationController,
+                    curve: Curves.elasticOut,
+                  ),
+                ),
+                child: AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  title: const Text(
+                    'วัสดุไม่พบในระบบ',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  content: const Text('คุณต้องการสร้างวัสดุใหม่หรือไม่?'),
                   actions: [
                     TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text('ยกเลิก'),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('ยกเลิก'),
                     ),
                     TextButton(
                       onPressed: () {
@@ -156,11 +195,11 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         );
                       },
-                      child: Text('สร้างใหม่'),
+                      child: const Text('สร้างใหม่'),
                     ),
                   ],
-                );
-              },
+                ),
+              ),
             );
           } else {
             String message = data["message"];
@@ -168,9 +207,21 @@ class _LoginPageState extends State<LoginPage> {
 
             showDialog(
               context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: const Text('ผลการสแกนสำเร็จ'),
+              builder: (context) => ScaleTransition(
+                scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                  CurvedAnimation(
+                    parent: _animationController,
+                    curve: Curves.elasticOut,
+                  ),
+                ),
+                child: AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  title: const Text(
+                    'ผลการสแกนสำเร็จ',
+                    style: TextStyle(color: Colors.green),
+                  ),
                   content: Text('$message\nจำนวนคงเหลือใหม่: $newQuantity'),
                   actions: [
                     TextButton(
@@ -181,16 +232,28 @@ class _LoginPageState extends State<LoginPage> {
                       child: const Text('ตกลง'),
                     ),
                   ],
-                );
-              },
+                ),
+              ),
             );
           }
         } else {
           showDialog(
             context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: const Text('ข้อผิดพลาด'),
+            builder: (context) => ScaleTransition(
+              scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: _animationController,
+                  curve: Curves.elasticOut,
+                ),
+              ),
+              child: AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                title: const Text(
+                  'ข้อผิดพลาด',
+                  style: TextStyle(color: Colors.red),
+                ),
                 content: Text('การสแกนล้มเหลว: ${response.body}'),
                 actions: [
                   TextButton(
@@ -201,8 +264,8 @@ class _LoginPageState extends State<LoginPage> {
                     child: const Text('ตกลง'),
                   ),
                 ],
-              );
-            },
+              ),
+            ),
           );
         }
       }
@@ -210,9 +273,21 @@ class _LoginPageState extends State<LoginPage> {
       print('เกิดข้อผิดพลาดในการสแกน: $e');
       showDialog(
         context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('ข้อผิดพลาด'),
+        builder: (context) => ScaleTransition(
+          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+            CurvedAnimation(
+              parent: _animationController,
+              curve: Curves.elasticOut,
+            ),
+          ),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            title: const Text(
+              'ข้อผิดพลาด',
+              style: TextStyle(color: Colors.red),
+            ),
             content: Text('เกิดข้อผิดพลาดในการสแกน: $e'),
             actions: [
               TextButton(
@@ -223,8 +298,8 @@ class _LoginPageState extends State<LoginPage> {
                 child: const Text('ตกลง'),
               ),
             ],
-          );
-        },
+          ),
+        ),
       );
     }
   }
@@ -232,6 +307,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _refresh() async {
     setState(() {
       productsFuture = fetchProductsFromApi();
+      _animationController.forward(from: 0); // รีเซ็ตอนิเมชันเมื่อรีเฟรช
     });
   }
 
@@ -239,84 +315,106 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Hero(
-                tag: 'logo',
-                child:
-                    Image.asset('assets/PNG/LOGO.png', height: 40, width: 40),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Hero(
+              tag: 'logo',
+              child: Image.asset('assets/PNG/LOGO.png', height: 40, width: 40),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Stock MIS',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'ThaiSans',
+                shadows: [
+                  Shadow(
+                    color: Colors.black26,
+                    offset: Offset(2, 2),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Stock MIS',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontFamily: 'ThaiSans',
-                  shadows: [
-                    Shadow(
-                        color: Colors.black26,
-                        offset: Offset(2, 2),
-                        blurRadius: 4)
+            ),
+          ],
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        elevation: 5,
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                SharedPreferences.getInstance().then((prefs) {
+                  prefs.remove('token');
+                  prefs.remove('role');
+                });
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  Login()),
+                );
+              } else if (value == 'contact_admin') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'ติดต่อ Admin',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                  
+                    ),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  ContactAdmin()),
+                );
+              }
+            },
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout, color: Colors.red),
+                    const SizedBox(width: 10),
+                    const Text('ออกจากระบบ'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'contact_admin',
+                child: Row(
+                  children: [
+                    const Icon(Icons.support_agent,
+                        color: Color.fromARGB(255, 247, 32, 32)),
+                    const SizedBox(width: 10),
+                    const Text('ติดต่อ Admin'),
                   ],
                 ),
               ),
             ],
           ),
-          backgroundColor: const Color.fromARGB(255, 255, 0, 0),
-          actions: [
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'logout') {
-                  SharedPreferences.getInstance().then((prefs) {
-                    prefs.remove('token');
-                    prefs.remove('role');
-                  });
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => Login()));
-                } else if (value == 'contact_admin') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('ติดต่อ Admin')),
-                  );
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => ContactAdmin()));
-                }
-              },
-              icon: Icon(Icons.more_vert, color: Colors.white),
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem<String>(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.red),
-                      SizedBox(width: 10),
-                      Text('ออกจากระบบ'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'contact_admin',
-                  child: Row(
-                    children: [
-                      Icon(Icons.support_agent,
-                          color: Color.fromARGB(255, 247, 32, 32)),
-                      SizedBox(width: 10),
-                      Text('ติดต่อ Admin'),
-                    ],
-                  ),
-                ),
-              ],
-            )
-          ]),
+        ],
+      ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(255, 255, 255, 255),
-              Color.fromARGB(255, 245, 245, 241),
-            ],
+            colors: [Colors.white, Color.fromARGB(255, 245, 245, 241)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -324,142 +422,174 @@ class _LoginPageState extends State<LoginPage> {
         child: RefreshIndicator(
           onRefresh: _refresh,
           child: SingleChildScrollView(
-            physics:
-                AlwaysScrollableScrollPhysics(), // อนุญาตให้เลื่อนแม้ข้อมูลสั้น
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.all(30),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  const SizedBox(height: 20),
-                  Container(
-                    width: 100,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromARGB(255, 255, 255, 255),
-                          Color.fromARGB(255, 245, 245, 241),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(30.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color.fromARGB(50, 255, 64, 64),
-                          blurRadius: 15,
-                          spreadRadius: 2,
-                          offset: Offset(0, 8),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const SizedBox(height: 20),
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 500),
+                      scale: 1.0,
+                      child: Container(
+                        width: double.infinity,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 255, 255, 255),
+                              Color.fromARGB(255, 245, 245, 241),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(30.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color.fromARGB(50, 255, 64, 64),
+                              blurRadius: 15,
+                              spreadRadius: 2,
+                              offset: Offset(0, 8),
+                            ),
+                            BoxShadow(
+                              color: Color.fromARGB(40, 255, 0, 0),
+                              blurRadius: 20,
+                              spreadRadius: 1,
+                              offset: Offset(0, 6),
+                            ),
+                            BoxShadow(
+                              color: Color.fromARGB(30, 220, 0, 0),
+                              blurRadius: 25,
+                              spreadRadius: 0,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        BoxShadow(
-                          color: Color.fromARGB(40, 255, 0, 0),
-                          blurRadius: 20,
-                          spreadRadius: 1,
-                          offset: Offset(0, 6),
-                        ),
-                        BoxShadow(
-                          color: Color.fromARGB(30, 220, 0, 0),
-                          blurRadius: 25,
-                          spreadRadius: 0,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20.0, vertical: 20.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0,
+                            vertical: 20.0,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.account_circle,
-                                  color: Color.fromARGB(255, 0, 0, 0),
-                                  size: 47),
-                              SizedBox(width: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.account_circle,
+                                      color: Color.fromARGB(255, 0, 0, 0),
+                                      size: 47),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '$username',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Color.fromARGB(255, 34, 31, 31),
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
                               Text(
-                                '$username',
+                                'วันที่: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
                                 style: const TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 14,
                                   color: Color.fromARGB(255, 34, 31, 31),
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'วัสดุคงเหลือ: $quantity ชิ้น',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color.fromARGB(255, 34, 31, 31),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'วันที่: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color.fromARGB(255, 34, 31, 31),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'วัสดุคงเหลือ: $quantity ชิ้น',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color.fromARGB(255, 34, 31, 31),
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildCategorySection(),
+                    const SizedBox(height: 10),
+                    Text(
+                      'วัสดุล่าสุด',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                        fontFamily: 'ThaiSans',
+                        shadows: [
+                          Shadow(
+                            color: Colors.red[100] ?? Colors.red,
+                            offset: Offset(2, 2),
+                            blurRadius: 4,
                           ),
                         ],
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildCategorySection(),
-                  const SizedBox(height: 10),
-                  Text(
-                    'วัสดุล่าสุด',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                      fontFamily: 'ThaiSans',
-                      shadows: [
-                        Shadow(
-                          color: Colors.red[100] ?? Colors.red,
-                          offset: Offset(2, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
+                    const SizedBox(height: 10),
+                    FutureBuilder<List<Product>>(
+                      future: productsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: SizedBox(
+                              width: 50,
+                              height: 50,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                                strokeWidth: 5,
+                              ),
+                            ),
+                          );
+                        } else if (snapshot.hasError) {
+                          return Center(
+                            child: Text(
+                              'เกิดข้อผิดพลาด: ${snapshot.error}',
+                              style: const TextStyle(color: Colors.red, fontSize: 18),
+                            ),
+                          );
+                        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'ไม่มีวัสดุล่าสุด',
+                              style: TextStyle(fontSize: 18, color: Colors.grey),
+                            ),
+                          );
+                        } else {
+                          final products = snapshot.data!;
+                          return FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: _buildProductGrid(products),
+                          );
+                        }
+                      },
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  FutureBuilder<List<Product>>(
-                    future: productsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(
-                            child: Text('เกิดข้อผิดพลาด: ${snapshot.error}',
-                                style: TextStyle(color: Colors.red)));
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(child: Text('ไม่มีวัสดุล่าสุด'));
-                      } else {
-                        final products = snapshot.data!;
-                        return _buildProductGrid(products);
-                      }
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: scanBarcode,
-        child: const Icon(Icons.center_focus_weak, color: Colors.white),
-        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+      floatingActionButton: ScaleTransition(
+        scale: _scaleAnimation,
+        child: FloatingActionButton(
+          onPressed: scanBarcode,
+          child: const Icon(Icons.center_focus_weak, color: Colors.white),
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          elevation: 6,
+        ),
       ),
     );
   }
@@ -489,13 +619,18 @@ class _LoginPageState extends State<LoginPage> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Color.fromARGB(255, 255, 255, 255),
+            gradient: LinearGradient(
+              colors: [Colors.white, Color.fromARGB(255, 245, 245, 241)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                  color: Color.fromARGB(82, 255, 0, 0),
-                  blurRadius: 8,
-                  offset: Offset(0, 4)),
+                color: Color.fromARGB(82, 255, 0, 0),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
             ],
           ),
           child: Column(
@@ -544,6 +679,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildProductGrid(List<Product> products) {
     final uniqueProducts = products.take(4).toList();
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -551,15 +687,40 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
+          childAspectRatio: 0.8,
         ),
         itemCount: uniqueProducts.length,
         itemBuilder: (context, index) {
           final product = uniqueProducts[index];
-          return _buildSquareImageWithDescription(
-            context,
-            product.imageUrl,
-            product.name,
-            product,
+          return AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: _animationController,
+                  curve: Interval(
+                    (index / 10),
+                    1.0,
+                    curve: Curves.easeInOut,
+                  ),
+                ),
+              );
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.5),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: _buildSquareImageWithDescription(
+                    context,
+                    product.imageUrl,
+                    product.name,
+                    product,
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -568,8 +729,13 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 Widget _buildSquareBoxWithText(
-    BuildContext context, String text, String description, Widget nextPage,
-    {double width = 100, double height = 100}) {
+  BuildContext context,
+  String text,
+  String description,
+  Widget nextPage, {
+  double width = 100,
+  double height = 100,
+}) {
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -630,7 +796,11 @@ Widget _buildSquareBoxWithText(
 }
 
 Widget _buildCategoryButton(
-    BuildContext context, String imagePath, String label, Widget nextPage) {
+  BuildContext context,
+  String imagePath,
+  String label,
+  Widget nextPage,
+) {
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -649,22 +819,26 @@ Widget _buildCategoryButton(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          width: 55,
-          height: 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color.fromARGB(17, 0, 0, 0),
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.asset(imagePath, fit: BoxFit.cover),
+        AnimatedScale(
+          duration: const Duration(milliseconds: 200),
+          scale: 1.0,
+          child: Container(
+            width: 55,
+            height: 60,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromARGB(17, 0, 0, 0),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(imagePath, fit: BoxFit.cover),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -683,8 +857,14 @@ Widget _buildCategoryButton(
 }
 
 Widget _buildSquareImageWithDescription(
-    BuildContext context, String imagePath, String description, Product product,
-    {double width = 130, double height = 100, bool withBorder = false}) {
+  BuildContext context,
+  String imagePath,
+  String description,
+  Product product, {
+  double width = 130,
+  double height = 100,
+  bool withBorder = false,
+}) {
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -729,12 +909,14 @@ Widget _buildSquareImageWithDescription(
           ),
         ),
         const SizedBox(height: 8),
-        Text(description,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            )),
+        Text(
+          description,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
       ],
     ),
   );

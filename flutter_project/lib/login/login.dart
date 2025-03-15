@@ -104,7 +104,7 @@ class Login extends StatelessWidget {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 255, 0, 0),
+              Color.fromARGB(255, 252, 17, 0), Colors.deepOrange,
               Color.fromARGB(255, 255, 255, 255),
             ],
             begin: Alignment.topCenter,
@@ -125,14 +125,23 @@ class Login extends StatelessWidget {
                     width: 220,
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'ยินดีต้อนรับ',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 0, 0, 0),
+                 Text(
+                      'ยินดีต้อนรับ',
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(221, 253, 253, 253),
+                        fontFamily: 'ThaiSans',
+                        shadows: [
+                          Shadow(
+                            color: Color.fromARGB(255, 255, 0, 0) ?? Colors.red,
+                            offset: Offset(2, 2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
                   const SizedBox(height: 10),
                   const Text(
                     'เข้าสู่ระบบบัญชีของคุณ',
