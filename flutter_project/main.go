@@ -32,6 +32,7 @@ func Init() {
 	r.GET("/products", Newproduct.GetProduct)
 	r.POST("/api/scan", Newproduct.HandleScanBarcode)
 	r.POST("/products/delete", Newproduct.DeleteProduct)
+	
 
 	Newprovider := productProvider.NewProvider(db)
 	r.GET("/ProductProvider/search", Newprovider.SearchProducts)

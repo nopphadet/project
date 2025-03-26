@@ -330,7 +330,7 @@ func getIntValue(input sql.NullInt32) int {
 	return 0 // คืนค่าเริ่มต้นเมื่อเป็น NULL
 }
 
-// ฟังก์ชันสำหรับการสแกนบาร์โค้ดเพื่อเพิ่มสินค้า
+
 func (p *ProductController) HandleScanBarcode(c *gin.Context) {
 
 	type Request struct {
@@ -349,7 +349,7 @@ func (p *ProductController) HandleScanBarcode(c *gin.Context) {
 
 	err := p.dbClient.QueryRow("SELECT product_id, quantity FROM products WHERE barcode = ?", barcode).Scan(&productID, &quantity)
 	if err == sql.ErrNoRows {
-		// สินค้าไม่พบในระบบ ไม่เก็บข้อมูลลงฐานข้อมูล
+
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "not_found",
 			"message": "Product not found, but it will be added temporarily",

@@ -48,7 +48,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _animationController.forward();
-    _animationController.forward();
   }
 
   @override
@@ -307,7 +306,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   Future<void> _refresh() async {
     setState(() {
       productsFuture = fetchProductsFromApi();
-      _animationController.forward(from: 0); // รีเซ็ตอนิเมชันเมื่อรีเฟรช
+      _animationController.forward(from: 0);
     });
   }
 
@@ -361,7 +360,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 });
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  Login()),
+                  MaterialPageRoute(builder: (context) => Login()),
                 );
               } else if (value == 'contact_admin') {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -372,15 +371,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     ),
                     backgroundColor: Colors.red,
                     behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                  
-                    ),
+                    shape: RoundedRectangleBorder(),
                     duration: Duration(seconds: 3),
                   ),
                 );
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  ContactAdmin()),
+                  MaterialPageRoute(builder: (context) => ContactAdmin()),
                 );
               }
             },
@@ -801,6 +798,22 @@ Widget _buildCategoryButton(
   String label,
   Widget nextPage,
 ) {
+  // กำหนดไอคอนตาม label
+  IconData getIconForLabel(String label) {
+    switch (label) {
+      case 'วัสดุสำนักงาน':
+        return Icons.inventory_2;
+      case 'เพิ่มวัสดุ':
+        return Icons.add_box;
+      case 'จองวัสดุ':
+        return Icons.bookmark;
+      case 'จอง-คืน':
+        return Icons.receipt_long;
+      default:
+        return Icons.category;
+    }
+  }
+
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -834,10 +847,14 @@ Widget _buildCategoryButton(
                   offset: Offset(0, 4),
                 ),
               ],
+              color: Colors.white,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(imagePath, fit: BoxFit.cover),
+            child: Center(
+              child: Icon(
+                getIconForLabel(label),
+                size: 40,
+                color: Colors.redAccent,
+              ),
             ),
           ),
         ),
